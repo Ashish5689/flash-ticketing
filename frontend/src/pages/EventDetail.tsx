@@ -12,12 +12,21 @@ export function EventDetail({
 }: {
   event: EventDetailType;
   selectedSeat: EventSeat | null;
-  queue: { token: string; position: number | null; admitted: boolean } | null;
+  queue: { token: string; position: number | null; admitted: boolean; expired?: boolean } | null;
   onSeat: (seat: EventSeat) => void;
   onJoinQueue: () => void;
   onRefresh: () => void;
   onReserve: () => void;
 }) {
+  const queueLabel = queue?.expired
+    ? "Queue token expired"
+    : queue?.admitted
+      ? "Admitted"
+      : queue
+        ? `Position ${queue.position ?? "..."}`
+        : "Not in queue";
+  const joinLabel = queue?.expired ? "Rejoin waiting room" : queue ? "Waiting room joined" : "Join waiting room";
+
   return (
     <section className="content split">
       <div>
@@ -62,14 +71,12 @@ export function EventDetail({
         </div>
         <div className="queue-box">
           <Timer size={18} />
-          {queue ? (
-            <span>{queue.admitted ? "Admitted" : `Position ${queue.position ?? "..."}`}</span>
-          ) : (
-            <span>Not in queue</span>
-          )}
+          <span>{queueLabel}</span>
         </div>
-        <button className="secondary full" onClick={onJoinQueue}>Join waiting room</button>
-        <button className="primary full" disabled={!queue?.admitted || !selectedSeat} onClick={onReserve}>
+        <button className="secondary full" disabled={Boolean(queue && !queue.expired)} onClick={onJoinQueue}>
+          {joinLabel}
+        </button>
+        <button className="primary full" disabled={!queue?.admitted || queue.expired || !selectedSeat} onClick={onReserve}>
           Reserve {selectedSeat ? selectedSeat.seatLabel : "seat"}
         </button>
         {selectedSeat && <p className="muted">{selectedSeat.ticketTypeName} · ${(selectedSeat.priceCents / 100).toFixed(2)}</p>}
