@@ -1,0 +1,56 @@
+services:
+  - type: web
+    name: flash-ticketing-api
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm ci && npm run build
+    startCommand: npm run migrate && node dist/server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: UPSTASH_REDIS_REST_URL
+        sync: false
+      - key: UPSTASH_REDIS_REST_TOKEN
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: NEON_AUTH_BASE_URL
+        sync: false
+      - key: NEON_AUTH_JWKS_URL
+        sync: false
+      - key: ORGANIZER_EMAILS
+        sync: false
+      - key: CORS_ORIGIN
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_PUBLISHABLE_KEY
+        sync: false
+      - key: HOLD_TTL_SECONDS
+        value: 300
+      - key: QUEUE_ADMIT_BATCH_SIZE
+        value: 25
+      - key: QUEUE_ADMIT_INTERVAL_MS
+        value: 3000
+
+  - type: web
+    name: flash-ticketing-web
+    runtime: static
+    plan: free
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_URL
+        sync: false
+      - key: VITE_WS_URL
+        sync: false
+      - key: VITE_STRIPE_PUBLISHABLE_KEY
+        sync: false
+      - key: VITE_NEON_AUTH_URL
+        sync: false
