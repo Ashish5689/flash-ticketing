@@ -31,6 +31,12 @@ export function EventDetail({
           <button className="icon-button" onClick={onRefresh} title="Refresh availability"><RefreshCcw size={18} /></button>
         </div>
         <div className="screen-label">Stage / Screen</div>
+        <div className="seat-legend">
+          <span><i className="available" /> Available</span>
+          <span><i className="held" /> Held</span>
+          <span><i className="sold" /> Sold</span>
+          <span><i className="selected" /> Selected</span>
+        </div>
         <div className="seat-map" aria-label="Seat map">
           {event.seats.map((seat) => (
             <button
@@ -49,6 +55,11 @@ export function EventDetail({
       <aside className="side-panel">
         <h3>Checkout path</h3>
         <p className="muted">Join the sale, wait for admission, then reserve one available seat.</p>
+        <div className="live-counts">
+          <span><strong>{event.availableCount}</strong> Available</span>
+          <span><strong>{event.heldCount}</strong> Held</span>
+          <span><strong>{event.soldCount}</strong> Sold</span>
+        </div>
         <div className="queue-box">
           <Timer size={18} />
           {queue ? (

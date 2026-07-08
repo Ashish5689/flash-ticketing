@@ -2,7 +2,7 @@ import { z } from "zod";
 import { redis } from "../../config/redis";
 import { withTransaction } from "../../config/db";
 import { badRequest, conflict } from "../../shared/errors";
-import { publishUserEvent } from "../../ws/gateway";
+import { publishEventAvailability, publishUserEvent } from "../../ws/gateway";
 import { deleteHoldAfterConfirm, assertOwnedHold } from "../reservation/reservation.service";
 import { findSeatForSale } from "../events/events.repo";
 import { chargePayment } from "./payment.provider";
@@ -61,5 +61,6 @@ export async function confirmBooking(userId: string, idempotencyKey: string | un
   await redis.set(idemKey(idempotencyKey), JSON.stringify(response), "EX", 60 * 60 * 24);
   await deleteHoldAfterConfirm(hold);
   await publishUserEvent(userId, { type: "booking.confirmed", ...response });
+  await publishEventAvailability(hold.eventId);
   return response;
 }
