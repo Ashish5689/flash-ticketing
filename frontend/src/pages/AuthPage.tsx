@@ -25,7 +25,7 @@ export function AuthPage() {
           </div>
           <SignInButton mode="modal" fallbackRedirectUrl="/" forceRedirectUrl="/">
             <button className="google-button" type="button">
-              <Chrome size={18} /> Continue with Clerk
+              <Chrome size={18} /> Continue with Google or email
             </button>
           </SignInButton>
           <SignUpButton mode="modal" fallbackRedirectUrl="/" forceRedirectUrl="/">
