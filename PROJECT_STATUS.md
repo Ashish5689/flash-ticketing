@@ -41,14 +41,12 @@ Last updated: July 8, 2026
 - [x] Event-wide WebSocket subscriptions and live availability broadcasts.
 - [x] Organizer live dashboard with realtime available, held, and sold counts.
 - [x] Waiting-room realtime position, admission, and expiry messages with polling fallback.
+- [x] Stripe Elements checkout with backend PaymentIntent creation and confirmation verification.
 
 ## Partially Done
 
 - [ ] BookMyShow-style UI polish.
   Current state: the frontend has a better branded experience, but still needs richer event discovery, filters, card layouts, responsive polish, and a more production-grade ticketing flow.
-
-- [ ] Stripe frontend checkout.
-  Current state: backend Stripe PaymentIntent flow exists, but the frontend still uses a simple payment method ID input instead of Stripe Elements or Payment Element.
 
 - [ ] Load testing proof.
   Current state: a k6 script exists, but we still need a repeatable local load-test run, measured results, and a Postgres invariant checker after the run.

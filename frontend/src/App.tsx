@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import { api, type EventAvailabilityMessage, type EventDetail as EventDetailType, type EventSeat, type EventSummary } from "./api/client";
 import { Header } from "./components/Header";
@@ -164,6 +164,11 @@ export function App() {
     }
   }
 
+  const createCheckoutPaymentIntent = useCallback(
+    (holdId: string) => api.createPaymentIntent(token, { holdId }),
+    [token]
+  );
+
   return (
     <>
       <Header onHome={() => guarded(async () => { await loadEvents(); setView("events"); })} />
@@ -224,9 +229,10 @@ export function App() {
       {view === "checkout" && hold && (
         <Checkout
           hold={hold}
-          onConfirm={(paymentMethodId) =>
+          onCreatePaymentIntent={createCheckoutPaymentIntent}
+          onConfirm={(paymentIntentId) =>
             guarded(async () => {
-              const result = await api.confirm(token, { holdId: hold.holdId, paymentMethodId });
+              const result = await api.confirm(token, { holdId: hold.holdId, paymentIntentId });
               setConfirmation({ orderId: result.orderId, ticketCode: result.ticket.code });
               setView("confirmed");
             })

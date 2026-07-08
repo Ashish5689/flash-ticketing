@@ -99,7 +99,9 @@ export const api = {
     ),
   reserve: (token: string, body: { eventId: string; seatId: string; token: string }) =>
     request<{ holdId: string; eventId: string; seatId: string; expiresAt: string }>("/reserve", { method: "POST", body: JSON.stringify(body) }, token),
-  confirm: (token: string, body: { holdId: string; paymentMethodId: string }) =>
+  createPaymentIntent: (token: string, body: { holdId: string }) =>
+    request<{ clientSecret: string; paymentIntentId: string }>("/checkout/payment-intent", { method: "POST", body: JSON.stringify(body) }, token),
+  confirm: (token: string, body: { holdId: string; paymentIntentId: string }) =>
     request<{ orderId: string; ticket: { code: string; seatId: string } }>(
       "/confirm",
       {
