@@ -43,26 +43,17 @@ Last updated: July 8, 2026
 - [x] Waiting-room realtime position, admission, and expiry messages with polling fallback.
 - [x] Stripe Elements checkout with backend PaymentIntent creation and confirmation verification.
 - [x] BookMyShow-style discovery polish with search, category filters, stronger event cards, and clearer event detail states.
+- [x] Repeatable load-test guide and Postgres invariant checker.
+- [x] Deployment hardening notes for Render, Clerk, Stripe, and CORS.
+- [x] README portfolio updates with live demo links and final architecture notes.
 
 ## Partially Done
-
-- [ ] Load testing proof.
-  Current state: a k6 script exists, but we still need a repeatable local load-test run, measured results, and a Postgres invariant checker after the run.
-
-- [ ] Deployment hardening.
-  Current state: Render deploy works, but CORS, Clerk production keys, env hygiene, and service naming still need final cleanup.
-
-- [ ] README as final portfolio document.
-  Current state: README has setup and architecture information, but still needs final deployed URLs, load-test results, screenshots, and final architecture notes.
+No partially-done items are currently active. Move future in-progress work here when it is started but not complete.
 
 ## Left To Build
 
-- [ ] Full event discovery experience: search, filters, categories, location/date sorting, and stronger event cards.
-- [ ] Better seat-map UI with clearer states for available, held, sold, selected, and inaccessible seats.
-- [ ] Event-wide WebSocket rooms/channels so all viewers receive live seat availability changes.
-- [ ] Live organizer metrics: available, held, sold, revenue, conversion, and queue size.
-- [ ] Stripe Elements or Payment Element checkout in the frontend.
-- [ ] Robust queue UX: position movement, admitted state, expired token state, reconnect recovery, and user-friendly copy.
+- [ ] Advanced discovery filters: location/date sorting and richer category metadata.
+- [ ] Advanced organizer metrics: revenue, conversion, and queue size.
 - [ ] Integration test environment with real Postgres and Redis services in CI.
 - [ ] More backend tests:
   - [ ] Auth and Clerk token validation behavior.
@@ -73,9 +64,7 @@ Last updated: July 8, 2026
   - [ ] Queue token must be admitted before reserve.
   - [ ] Repeated confirm does not double-charge, double-order, or double-sell.
 - [ ] Frontend flow tests for buyer and organizer journeys.
-- [ ] k6 load-test result report with acceptance invariant:
-  - [ ] Sold seats in Postgres never exceed total seats.
-  - [ ] Each seat appears in at most one confirmed order.
+- [ ] Capture and commit measured k6 result numbers after running against local Docker services.
 - [ ] Graceful shutdown polish for WebSocket drain and worker stop behavior.
 - [ ] Rate limiting and bot-protection improvements around queue entry and reservation.
 - [ ] Clerk production configuration and production keys after testing.

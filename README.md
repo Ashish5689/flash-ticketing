@@ -26,6 +26,17 @@ flash-ticketing/
 └── DESIGN.md             # System design notes
 ```
 
+## Live Demo
+
+```text
+Frontend: https://flash-ticketing.onrender.com
+Backend:  https://book-and-chill.onrender.com
+Health:   https://book-and-chill.onrender.com/health
+Events:   https://book-and-chill.onrender.com/events
+```
+
+Render free services can cold-start after inactivity, so the first request may take a little longer.
+
 ## Environment Files
 
 Do not commit real `.env` files. This repo ignores `.env`, `.env.local`, and generated build folders.
@@ -189,6 +200,7 @@ POST   /events/:id/queue/join
 GET    /events/:id/queue/status?token=...
 POST   /reserve
 DELETE /reserve/:holdId
+POST   /checkout/payment-intent
 POST   /confirm
 GET    /orders/:id
 GET    /health
@@ -196,12 +208,20 @@ GET    /metrics
 WS     /ws?token=JWT
 ```
 
+WebSocket clients can subscribe to event-wide availability updates:
+
+```json
+{ "type": "subscribe.event", "eventId": "..." }
+```
+
+The server broadcasts live availability, queue position, admission, hold, and confirmation messages.
+
 ## Correctness Model
 
 - Seat holds use Redis `SET NX EX`, so only one buyer can hold a seat at a time.
 - Holds expire automatically using Redis TTL.
 - Booking confirmation requires an `Idempotency-Key`.
-- Stripe receives the same idempotency key to avoid double charges.
+- Stripe PaymentIntents are created for active holds and verified before durable confirmation.
 - PostgreSQL marks the seat sold and inserts the order in one transaction.
 - `order_items.seat_id` is unique, adding a durable no-double-sale guard.
 - The waiting room limits how many users can hit the reservation path at once.
@@ -249,7 +269,15 @@ npm --prefix frontend run build
 
 ## Load Test
 
-Install k6, create or seed an event, log in, join the queue, wait for admission, then run:
+Install k6, run local services, seed or create an event, log in, join the queue, wait for admission, then run:
+
+```bash
+docker compose up -d
+npm --prefix backend run migrate
+npm --prefix backend run seed
+```
+
+Get an auth token and admitted queue token from the local app or API, then run:
 
 ```bash
 k6 run \
@@ -261,7 +289,23 @@ k6 run \
   loadtest/reserve.js
 ```
 
-The invariant to check: one seat produces at most one successful reservation and one confirmed order.
+After a load test that includes confirmations, verify durable database invariants:
+
+```bash
+npm --prefix backend run check:invariants
+```
+
+Acceptance invariants:
+
+- Sold seats in Postgres never exceed total seats.
+- Each seat appears in at most one confirmed order.
+
+Current result section:
+
+```text
+Local k6 result: pending final recorded run.
+Invariant checker: available through npm --prefix backend run check:invariants.
+```
 
 ## Render Deployment
 
@@ -298,6 +342,11 @@ QUEUE_ADMIT_INTERVAL_MS
 ```
 
 Use either `REDIS_URL` or the two Upstash REST variables. With Upstash free tier, the REST URL/token path is usually easiest.
+Set `CORS_ORIGIN` to the exact frontend origin with no trailing slash:
+
+```text
+https://flash-ticketing.onrender.com
+```
 
 Frontend Render static site:
 
@@ -316,6 +365,13 @@ VITE_STRIPE_PUBLISHABLE_KEY=pk_test_...
 VITE_CLERK_PUBLISHABLE_KEY=pk_test_...
 ```
 
+For the current demo:
+
+```text
+VITE_API_URL=https://book-and-chill.onrender.com
+VITE_WS_URL=wss://book-and-chill.onrender.com/ws
+```
+
 Set backend `CORS_ORIGIN` to the frontend Render URL:
 
 ```text
@@ -323,6 +379,18 @@ https://your-render-static-site.onrender.com
 ```
 
 Render free tier may sleep after inactivity. Use it for demos; run serious concurrency tests locally or in a dedicated load-test environment.
+
+Clerk checklist:
+
+- Add `http://localhost:5173` for local development.
+- Add `https://flash-ticketing.onrender.com` for the Render frontend.
+- Use production Clerk keys before treating the deployment as production.
+
+Stripe checklist:
+
+- Use test keys while developing.
+- Set `STRIPE_SECRET_KEY` only on the backend service.
+- Set `VITE_STRIPE_PUBLISHABLE_KEY` only on the frontend static site.
 
 ## GitHub Safety
 
