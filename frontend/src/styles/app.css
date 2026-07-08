@@ -348,13 +348,48 @@ button {
 }
 
 .category {
+  border: 1px solid #e2e4e9;
   border-radius: 999px;
   background: #ffffff;
-  border: 1px solid #e2e4e9;
   padding: 9px 16px;
   color: #525762;
   font-weight: 800;
   white-space: nowrap;
+}
+
+.discovery-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.event-search,
+.filter-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: #ffffff;
+  color: #777d88;
+  padding: 0 14px;
+}
+
+.event-search input {
+  border: 0;
+  min-height: 44px;
+  padding: 0;
+}
+
+.event-search input:focus {
+  outline: 0;
+}
+
+.filter-chip {
+  color: var(--red);
+  font-weight: 900;
 }
 
 .category.active {
@@ -451,6 +486,29 @@ button {
   font-weight: 900;
 }
 
+.date-chip {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  border-radius: 999px;
+  padding: 7px 10px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.availability-badge {
+  width: fit-content;
+  margin-top: 12px;
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: #fff0f1;
+  color: var(--red);
+  font-size: 12px;
+  font-weight: 900;
+}
+
 .event-card h3 {
   margin: 12px 0 8px;
   font-size: 19px;
@@ -506,6 +564,40 @@ button {
 
 .event-detail-banner p {
   color: rgba(255, 255, 255, 0.76);
+}
+
+.detail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.detail-meta span {
+  border-radius: 999px;
+  padding: 7px 10px;
+  background: rgba(255, 255, 255, 0.13);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: capitalize;
+}
+
+.empty-state {
+  min-height: 260px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 8px;
+  border: 1px dashed #d0d4dd;
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--muted);
+  text-align: center;
+}
+
+.empty-state strong {
+  color: var(--ink);
 }
 
 .screen-label {
@@ -891,6 +983,10 @@ select {
   .discovery-hero {
     align-items: start;
     flex-direction: column;
+  }
+
+  .discovery-controls {
+    grid-template-columns: 1fr;
   }
 
   .metric-grid,
