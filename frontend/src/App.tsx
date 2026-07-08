@@ -25,6 +25,21 @@ export function App() {
   const [confirmation, setConfirmation] = useState<{ orderId: string; ticketCode: string } | null>(null);
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    if (!user) return;
+    if (window.location.hash === "#organizer" && user.role === "organizer") {
+      setView("organizer");
+      window.history.replaceState({}, "", "/");
+      return;
+    }
+    if (window.location.hash === "#events" || window.location.hash === "#auth-callback") {
+      setView("events");
+      window.history.replaceState({}, "", "/");
+      return;
+    }
+    setView(user.role === "organizer" ? "organizer" : "events");
+  }, [user?.id, user?.role]);
+
   async function loadEvents() {
     setEvents(await api.events());
   }

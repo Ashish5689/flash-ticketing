@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { api, type User } from "../api/client";
 import { authClient } from "../auth";
 
@@ -6,7 +6,7 @@ interface AuthState {
   user: User | null;
   token: string | null;
   loading: boolean;
-  refresh: (showLoading?: boolean) => Promise<void>;
+  refresh: (options?: { showLoading?: boolean; fresh?: boolean }) => Promise<User | null>;
   logout: () => Promise<void>;
 }
 
@@ -17,46 +17,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  async function refresh(showLoading = true) {
+  const refresh = useCallback(async (options: { showLoading?: boolean; fresh?: boolean } = {}) => {
+    const showLoading = options.showLoading ?? true;
     if (showLoading) setLoading(true);
     try {
-      const session = await authClient.getSession();
+      const session = await authClient.getSession(
+        options.fresh ? { query: { disableCookieCache: true } } : undefined
+      );
       if (!session.data?.session) {
         setToken(null);
         setUser(null);
-        return;
+        return null;
       }
       const tokenResult = await authClient.token();
       const nextToken = tokenResult.data?.token;
       if (!nextToken) {
         setToken(null);
         setUser(null);
-        return;
+        return null;
       }
       const profile = await api.me(nextToken);
       setToken(nextToken);
       setUser(profile.user);
+      return profile.user;
     } finally {
       if (showLoading) setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
     localStorage.removeItem("flash.token");
     localStorage.removeItem("flash.user");
-    refresh().catch(() => {
+    const isAuthCallback = window.location.hash === "#auth-callback" || window.location.pathname === "/auth/callback";
+    refresh({ fresh: isAuthCallback }).catch(() => {
       setToken(null);
       setUser(null);
       setLoading(false);
     });
-  }, []);
+  }, [refresh]);
 
   useEffect(() => {
     const id = window.setInterval(() => {
-      refresh(false).catch(() => undefined);
+      refresh({ showLoading: false }).catch(() => undefined);
     }, 10 * 60 * 1000);
     return () => window.clearInterval(id);
-  }, []);
+  }, [refresh]);
 
   const value = useMemo<AuthState>(
     () => ({
@@ -70,7 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setToken(null);
       }
     }),
-    [user, token, loading]
+    [user, token, loading, refresh]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

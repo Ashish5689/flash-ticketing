@@ -51,7 +51,8 @@ async function resolveSocketUser(token: string): Promise<AuthUser> {
     const email = typeof payload.email === "string" ? payload.email.toLowerCase() : "";
     if (!email) throw new Error("Missing email");
     const name = typeof payload.name === "string" && payload.name.trim() ? payload.name.trim() : email.split("@")[0];
-    const role = organizerEmails.has(email) ? "organizer" : "buyer";
+    const neonRole = typeof payload.role === "string" ? payload.role.toLowerCase() : "";
+    const role = organizerEmails.has(email) || neonRole === "admin" || neonRole === "organizer" ? "organizer" : "buyer";
     const user = await upsertExternalUser({ email, name, role });
     return { id: user.id, email: user.email, role: user.role };
   }

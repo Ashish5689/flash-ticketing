@@ -1,5 +1,5 @@
 import { Chrome, Mail, ShieldCheck, Sparkles, Ticket } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { authClient } from "../auth";
 import { useAuth } from "../hooks/useAuth";
 
@@ -11,6 +11,17 @@ export function AuthPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (window.location.hash !== "#auth-callback" && window.location.pathname !== "/auth/callback") return;
+    setBusy(true);
+    refresh({ fresh: true })
+      .then((user) => {
+        if (user) window.history.replaceState({}, "", user.role === "organizer" ? "/#organizer" : "/#events");
+      })
+      .catch((err) => setError(err instanceof Error ? err.message : "Could not complete Google sign-in"))
+      .finally(() => setBusy(false));
+  }, [refresh]);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -25,7 +36,8 @@ export function AuthPage() {
         setError(result.error.message ?? "Authentication failed");
         return;
       }
-      await refresh();
+      const user = await refresh({ fresh: true });
+      if (user) window.history.replaceState({}, "", user.role === "organizer" ? "/#organizer" : "/#events");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Authentication failed");
     } finally {
@@ -39,7 +51,7 @@ export function AuthPage() {
     try {
       await authClient.signIn.social({
         provider: "google",
-        callbackURL: window.location.origin
+        callbackURL: `${window.location.origin}/#auth-callback`
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Google sign-in failed");

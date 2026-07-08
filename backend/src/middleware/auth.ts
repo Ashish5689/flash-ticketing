@@ -53,9 +53,17 @@ async function verifyNeonAuthToken(token: string): Promise<AuthUser> {
   const { payload } = await jwtVerify(token, JWKS, { issuer: neonIssuer });
   const email = readEmail(payload);
   const name = readName(payload, email);
-  const role: Role = organizerEmails.has(email.toLowerCase()) ? "organizer" : "buyer";
+  const role: Role = resolveAppRole(payload, email);
   const user = await upsertExternalUser({ email, name, role });
   return { id: user.id, email: user.email, role: user.role };
+}
+
+function resolveAppRole(payload: JWTPayload, email: string): Role {
+  const neonRole = typeof payload.role === "string" ? payload.role.toLowerCase() : "";
+  if (organizerEmails.has(email.toLowerCase()) || neonRole === "admin" || neonRole === "organizer") {
+    return "organizer";
+  }
+  return "buyer";
 }
 
 function readEmail(payload: JWTPayload): string {
