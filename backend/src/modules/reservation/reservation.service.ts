@@ -6,7 +6,7 @@ import { badRequest, conflict, forbidden, notFound } from "../../shared/errors";
 import type { HoldPayload } from "../../types";
 import { findSeatForSale } from "../events/events.repo";
 import { assertAdmitted } from "../queue/queue.service";
-import { publishUserEvent } from "../../ws/gateway";
+import { publishEventAvailability, publishUserEvent } from "../../ws/gateway";
 import { parseRedisJson } from "../../shared/redisJson";
 
 export const reserveSchema = z.object({
@@ -38,6 +38,7 @@ export async function reserveSeat(userId: string, input: z.infer<typeof reserveS
 
   await redis.set(holdIdKey(holdId), key, "EX", env.HOLD_TTL_SECONDS);
   await publishUserEvent(userId, { type: "hold.created", ...payload });
+  await publishEventAvailability(input.eventId);
   return payload;
 }
 
@@ -70,6 +71,7 @@ export async function releaseHold(holdId: string, userId: string) {
   const deleted = await redis.eval(script, 2, key, holdIdKey(holdId), JSON.stringify(hold));
   if (deleted !== 1) throw conflict("Hold could not be released");
   await publishUserEvent(userId, { type: "hold.released", holdId });
+  await publishEventAvailability(hold.eventId);
   return { released: true };
 }
 

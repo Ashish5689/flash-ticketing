@@ -1,8 +1,9 @@
 import { z } from "zod";
-import { redis } from "../../config/redis";
 import { withTransaction } from "../../config/db";
-import { badRequest, notFound } from "../../shared/errors";
+import { badRequest } from "../../shared/errors";
 import * as repo from "./events.repo";
+import { buildEventAvailability, heldSeatIds } from "./availability.service";
+import { publishEventAvailability } from "../../ws/gateway";
 
 export const createEventSchema = z.object({
   name: z.string().min(3),
@@ -17,12 +18,6 @@ export const addSeatsSchema = z.object({
   seatLabels: z.array(z.string().min(1)).min(1).max(500)
 });
 
-async function heldSeatIds(eventId: string): Promise<Set<string>> {
-  const keys = await redis.keys(`hold:${eventId}:*`);
-  if (!keys.length) return new Set();
-  return new Set(keys.map((key) => key.split(":").at(-1) as string));
-}
-
 export async function listEvents() {
   const rows = await repo.listEvents();
   return Promise.all(
@@ -34,16 +29,7 @@ export async function listEvents() {
 }
 
 export async function getEvent(id: string) {
-  const event = await repo.getEvent(id);
-  if (!event) throw notFound("Event not found");
-  const held = await heldSeatIds(id);
-  return {
-    ...event,
-    seats: event.seats.map((seat: any) => ({
-      ...seat,
-      liveStatus: seat.status === "sold" ? "sold" : held.has(seat.id) ? "held" : "available"
-    }))
-  };
+  return buildEventAvailability(id);
 }
 
 export async function createEvent(organizerId: string, input: z.infer<typeof createEventSchema>) {
@@ -53,5 +39,7 @@ export async function createEvent(organizerId: string, input: z.infer<typeof cre
 export async function addEventSeats(eventId: string, input: z.infer<typeof addSeatsSchema>) {
   const duplicates = new Set(input.seatLabels);
   if (duplicates.size !== input.seatLabels.length) throw badRequest("Seat labels must be unique");
-  return withTransaction((client) => repo.addSeats(client, { eventId, ...input }));
+  const ticketType = await withTransaction((client) => repo.addSeats(client, { eventId, ...input }));
+  await publishEventAvailability(eventId);
+  return ticketType;
 }

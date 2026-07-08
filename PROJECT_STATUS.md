@@ -38,17 +38,13 @@ Last updated: July 8, 2026
 - [x] k6 reservation script added.
 - [x] Backend tests for reservation correctness and idempotency basics.
 - [x] GitHub CI for backend lint/test and frontend build.
+- [x] Event-wide WebSocket subscriptions and live availability broadcasts.
+- [x] Organizer live dashboard with realtime available, held, and sold counts.
 
 ## Partially Done
 
 - [ ] BookMyShow-style UI polish.
   Current state: the frontend has a better branded experience, but still needs richer event discovery, filters, card layouts, responsive polish, and a more production-grade ticketing flow.
-
-- [ ] Live availability updates.
-  Current state: user-specific WebSocket messages exist, but event-wide seat availability broadcasts are not yet complete.
-
-- [ ] Organizer live dashboard.
-  Current state: organizers can create inventory and see basic counts, but the dashboard does not yet receive rich live sales/hold updates.
 
 - [ ] Waiting-room realtime experience.
   Current state: queue join, queue status, and admission exist. Queue position updates still rely mostly on polling and need stronger WebSocket updates/reconnect handling.

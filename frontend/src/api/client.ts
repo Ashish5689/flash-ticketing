@@ -32,6 +32,10 @@ export interface EventDetail {
   startsAt: string;
   status: "draft" | "onsale" | "closed";
   seats: EventSeat[];
+  totalSeats: number;
+  soldCount: number;
+  heldCount: number;
+  availableCount: number;
 }
 
 export interface EventSummary {
@@ -43,6 +47,11 @@ export interface EventSummary {
   totalSeats: number;
   soldCount: number;
   heldCount: number;
+}
+
+export interface EventAvailabilityMessage extends EventDetail {
+  type: "event.availability";
+  eventId: string;
 }
 
 export class ApiError extends Error {

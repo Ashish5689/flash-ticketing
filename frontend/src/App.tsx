@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { AlertTriangle, Loader2 } from "lucide-react";
-import { api, type EventDetail as EventDetailType, type EventSeat, type EventSummary } from "./api/client";
+import { api, type EventAvailabilityMessage, type EventDetail as EventDetailType, type EventSeat, type EventSummary } from "./api/client";
 import { Header } from "./components/Header";
 import { useAuth } from "./hooks/useAuth";
 import { useWebSocket } from "./hooks/useWebSocket";
@@ -15,7 +15,7 @@ type View = "events" | "detail" | "checkout" | "confirmed" | "organizer";
 
 export function App() {
   const { token, user, loading } = useAuth();
-  const messages = useWebSocket(token);
+  const { connected: wsConnected, lastMessage, send } = useWebSocket(token);
   const [view, setView] = useState<View>("events");
   const [events, setEvents] = useState<EventSummary[]>([]);
   const [event, setEvent] = useState<EventDetailType | null>(null);
@@ -65,9 +65,70 @@ export function App() {
   }, [queue, event, token]);
 
   useEffect(() => {
-    const admitted = messages.find((message) => message.type === "queue.admitted") as { token?: string } | undefined;
-    if (admitted?.token && queue?.token === admitted.token) setQueue({ ...queue, admitted: true, position: 0 });
-  }, [messages, queue]);
+    if (!event || !wsConnected) return;
+    send({ type: "subscribe.event", eventId: event.id });
+    return () => {
+      send({ type: "unsubscribe.event", eventId: event.id });
+    };
+  }, [event?.id, wsConnected, send]);
+
+  useEffect(() => {
+    if (view !== "organizer" || !wsConnected) return;
+    for (const item of events) send({ type: "subscribe.event", eventId: item.id });
+    return () => {
+      for (const item of events) send({ type: "unsubscribe.event", eventId: item.id });
+    };
+  }, [events, view, wsConnected, send]);
+
+  useEffect(() => {
+    if (!lastMessage) return;
+    if (lastMessage.type === "queue.admitted") {
+      const admitted = lastMessage as { token?: string };
+      if (admitted.token && queue?.token === admitted.token) setQueue({ ...queue, admitted: true, position: 0 });
+    }
+    if (lastMessage.type === "event.availability") {
+      applyAvailability(lastMessage as unknown as EventAvailabilityMessage);
+    }
+  }, [lastMessage, queue]);
+
+  function applyAvailability(message: EventAvailabilityMessage) {
+    setEvents((existing) =>
+      existing.map((item) =>
+        item.id === message.eventId
+          ? {
+              ...item,
+              name: message.name,
+              venue: message.venue,
+              startsAt: message.startsAt,
+              status: message.status,
+              totalSeats: message.totalSeats,
+              soldCount: message.soldCount,
+              heldCount: message.heldCount
+            }
+          : item
+      )
+    );
+    setEvent((current) =>
+      current?.id === message.eventId
+        ? {
+            id: message.id,
+            name: message.name,
+            venue: message.venue,
+            startsAt: message.startsAt,
+            status: message.status,
+            seats: message.seats,
+            totalSeats: message.totalSeats,
+            soldCount: message.soldCount,
+            heldCount: message.heldCount,
+            availableCount: message.availableCount
+          }
+        : current
+    );
+    setSelectedSeat((current) => {
+      if (!current || message.eventId !== event?.id) return current;
+      return message.seats.find((seat) => seat.id === current.id) ?? null;
+    });
+  }
 
   if (loading) {
     return (
@@ -102,6 +163,8 @@ export function App() {
       )}
       {view === "organizer" && (
         <OrganizerDashboard
+          events={events}
+          liveConnected={wsConnected}
           onCreate={(input) =>
             guarded(async () => {
               const created = await api.createEvent(token, {
