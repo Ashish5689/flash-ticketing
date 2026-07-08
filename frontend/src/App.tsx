@@ -20,7 +20,7 @@ export function App() {
   const [events, setEvents] = useState<EventSummary[]>([]);
   const [event, setEvent] = useState<EventDetailType | null>(null);
   const [selectedSeat, setSelectedSeat] = useState<EventSeat | null>(null);
-  const [queue, setQueue] = useState<{ token: string; position: number | null; admitted: boolean } | null>(null);
+  const [queue, setQueue] = useState<{ token: string; position: number | null; admitted: boolean; expired?: boolean } | null>(null);
   const [hold, setHold] = useState<{ holdId: string; expiresAt: string } | null>(null);
   const [confirmation, setConfirmation] = useState<{ orderId: string; ticketCode: string } | null>(null);
   const [error, setError] = useState("");
@@ -56,10 +56,14 @@ export function App() {
   }, [token]);
 
   useEffect(() => {
-    if (!queue || !event || queue.admitted || !token) return;
+    if (!queue || !event || queue.admitted || queue.expired || !token) return;
     const id = setInterval(async () => {
-      const status = await api.queueStatus(token, event.id, queue.token);
-      setQueue(status);
+      try {
+        const status = await api.queueStatus(token, event.id, queue.token);
+        setQueue(status);
+      } catch {
+        setQueue((current) => current && current.token === queue.token ? { ...current, expired: true, admitted: false } : current);
+      }
     }, 2500);
     return () => clearInterval(id);
   }, [queue, event, token]);
@@ -84,7 +88,17 @@ export function App() {
     if (!lastMessage) return;
     if (lastMessage.type === "queue.admitted") {
       const admitted = lastMessage as { token?: string };
-      if (admitted.token && queue?.token === admitted.token) setQueue({ ...queue, admitted: true, position: 0 });
+      if (admitted.token && queue?.token === admitted.token) setQueue({ ...queue, admitted: true, position: 0, expired: false });
+    }
+    if (lastMessage.type === "queue.position") {
+      const positioned = lastMessage as { token?: string; position?: number };
+      if (positioned.token && queue?.token === positioned.token) {
+        setQueue({ ...queue, position: positioned.position ?? queue.position, expired: false });
+      }
+    }
+    if (lastMessage.type === "queue.expired") {
+      const expired = lastMessage as { token?: string };
+      if (expired.token && queue?.token === expired.token) setQueue({ ...queue, admitted: false, expired: true });
     }
     if (lastMessage.type === "event.availability") {
       applyAvailability(lastMessage as unknown as EventAvailabilityMessage);
@@ -194,7 +208,7 @@ export function App() {
           onJoinQueue={() =>
             guarded(async () => {
               const joined = await api.joinQueue(token, event.id);
-              setQueue(joined);
+              setQueue({ ...joined, expired: false });
             })
           }
           onReserve={() =>

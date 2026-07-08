@@ -7,6 +7,7 @@ import { publishUserEvent } from "../../ws/gateway";
 import { parseRedisJson } from "../../shared/redisJson";
 
 const tokenTtlSeconds = 60 * 60;
+const expiryTimers = new Map<string, NodeJS.Timeout>();
 
 export const queueTokenSchema = z.object({
   token: z.string().min(16)
@@ -33,7 +34,10 @@ export async function joinQueue(eventId: string, userId: string) {
     .set(tokenKey(token), JSON.stringify({ eventId, userId }), "EX", tokenTtlSeconds)
     .exec();
   const position = await redis.zrank(queueKey(eventId), token);
-  return { token, position: position === null ? 0 : position + 1, admitted: false };
+  const response = { token, position: position === null ? 0 : position + 1, admitted: false };
+  scheduleQueueExpiry(eventId, userId, token);
+  await publishUserEvent(userId, { type: "queue.position", eventId, token, position: response.position });
+  return response;
 }
 
 export async function queueStatus(eventId: string, userId: string, token: string) {
@@ -55,7 +59,10 @@ export async function admitBatchForEvent(eventId: string) {
   const tokens = await redis.zrange(queueKey(eventId), 0, env.QUEUE_ADMIT_BATCH_SIZE - 1);
   if (!tokens.length) return 0;
   const multi = redis.multi();
-  for (const token of tokens) multi.sadd(admittedKey(eventId), token);
+  for (const token of tokens) {
+    multi.sadd(admittedKey(eventId), token);
+    cancelQueueExpiry(token);
+  }
   multi.expire(admittedKey(eventId), tokenTtlSeconds);
   multi.zrem(queueKey(eventId), ...tokens);
   await multi.exec();
@@ -66,6 +73,7 @@ export async function admitBatchForEvent(eventId: string) {
       if (payload) await publishUserEvent(payload.userId, { type: "queue.admitted", eventId, token });
     })
   );
+  await publishQueuePositions(eventId);
   return tokens.length;
 }
 
@@ -82,4 +90,41 @@ async function readToken(token: string): Promise<{ eventId: string; userId: stri
   } catch {
     throw badRequest("Malformed queue token");
   }
+}
+
+async function publishQueuePositions(eventId: string) {
+  const tokens = await redis.zrange(queueKey(eventId), 0, -1);
+  await Promise.all(
+    tokens.map(async (token, index) => {
+      const payload = await readToken(token);
+      if (!payload) {
+        await redis.zrem(queueKey(eventId), token);
+        return;
+      }
+      await publishUserEvent(payload.userId, { type: "queue.position", eventId, token, position: index + 1 });
+    })
+  );
+}
+
+function scheduleQueueExpiry(eventId: string, userId: string, token: string) {
+  cancelQueueExpiry(token);
+  const timer = setTimeout(() => {
+    expiryTimers.delete(token);
+    void expireQueueToken(eventId, userId, token);
+  }, tokenTtlSeconds * 1000);
+  timer.unref();
+  expiryTimers.set(token, timer);
+}
+
+function cancelQueueExpiry(token: string) {
+  const timer = expiryTimers.get(token);
+  if (!timer) return;
+  clearTimeout(timer);
+  expiryTimers.delete(token);
+}
+
+async function expireQueueToken(eventId: string, userId: string, token: string) {
+  await redis.zrem(queueKey(eventId), token);
+  await publishUserEvent(userId, { type: "queue.expired", eventId, token });
+  await publishQueuePositions(eventId);
 }

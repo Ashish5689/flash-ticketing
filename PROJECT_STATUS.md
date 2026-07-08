@@ -40,14 +40,12 @@ Last updated: July 8, 2026
 - [x] GitHub CI for backend lint/test and frontend build.
 - [x] Event-wide WebSocket subscriptions and live availability broadcasts.
 - [x] Organizer live dashboard with realtime available, held, and sold counts.
+- [x] Waiting-room realtime position, admission, and expiry messages with polling fallback.
 
 ## Partially Done
 
 - [ ] BookMyShow-style UI polish.
   Current state: the frontend has a better branded experience, but still needs richer event discovery, filters, card layouts, responsive polish, and a more production-grade ticketing flow.
-
-- [ ] Waiting-room realtime experience.
-  Current state: queue join, queue status, and admission exist. Queue position updates still rely mostly on polling and need stronger WebSocket updates/reconnect handling.
 
 - [ ] Stripe frontend checkout.
   Current state: backend Stripe PaymentIntent flow exists, but the frontend still uses a simple payment method ID input instead of Stripe Elements or Payment Element.
