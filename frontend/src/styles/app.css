@@ -657,6 +657,17 @@ button {
   border: 1px solid var(--line);
 }
 
+.checkout-box.stripe-element {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+}
+
+.stripe-form {
+  display: grid;
+  gap: 14px;
+}
+
 .form {
   display: grid;
   gap: 14px;

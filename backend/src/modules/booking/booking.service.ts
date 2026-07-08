@@ -5,13 +5,14 @@ import { badRequest, conflict } from "../../shared/errors";
 import { publishEventAvailability, publishUserEvent } from "../../ws/gateway";
 import { deleteHoldAfterConfirm, assertOwnedHold } from "../reservation/reservation.service";
 import { findSeatForSale } from "../events/events.repo";
-import { chargePayment } from "./payment.provider";
+import { chargePayment, verifyPaymentIntent } from "./payment.provider";
 import { confirmSeatOrder, findOrderByIdempotencyKey } from "./booking.repo";
 import { parseRedisJson } from "../../shared/redisJson";
 
 export const confirmSchema = z.object({
   holdId: z.string().uuid(),
-  paymentMethodId: z.string().min(3)
+  paymentIntentId: z.string().min(3).optional(),
+  paymentMethodId: z.string().min(3).optional()
 });
 
 function idemKey(key: string) {
@@ -28,11 +29,19 @@ export async function confirmBooking(userId: string, idempotencyKey: string | un
   const seat = await findSeatForSale(hold.seatId);
   if (!seat) throw badRequest("Seat no longer exists");
 
-  const payment = await chargePayment({
-    amountCents: seat.priceCents,
-    paymentMethodId: input.paymentMethodId,
-    idempotencyKey
-  });
+  const payment = input.paymentIntentId
+    ? await verifyPaymentIntent({
+        amountCents: seat.priceCents,
+        paymentIntentId: input.paymentIntentId
+      })
+    : input.paymentMethodId
+      ? await chargePayment({
+          amountCents: seat.priceCents,
+          paymentMethodId: input.paymentMethodId,
+          idempotencyKey
+        })
+      : null;
+  if (!payment) throw badRequest("Payment confirmation is required");
   if (payment.status !== "succeeded") throw badRequest("Payment did not succeed");
 
   const result = await withTransaction(async (client) => {
