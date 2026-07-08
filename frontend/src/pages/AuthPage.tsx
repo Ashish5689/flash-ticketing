@@ -1,64 +1,7 @@
+import { SignInButton, SignUpButton } from "@clerk/clerk-react";
 import { Chrome, Mail, ShieldCheck, Sparkles, Ticket } from "lucide-react";
-import { useEffect, useState } from "react";
-import { authClient } from "../auth";
-import { useAuth } from "../hooks/useAuth";
 
 export function AuthPage() {
-  const { refresh } = useAuth();
-  const [mode, setMode] = useState<"login" | "register">("login");
-  const [email, setEmail] = useState("admin@admin.com");
-  const [name, setName] = useState("Ashish Admin");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    if (window.location.hash !== "#auth-callback" && window.location.pathname !== "/auth/callback") return;
-    setBusy(true);
-    refresh({ fresh: true })
-      .then((user) => {
-        if (user) window.history.replaceState({}, "", user.role === "organizer" ? "/#organizer" : "/#events");
-      })
-      .catch((err) => setError(err instanceof Error ? err.message : "Could not complete Google sign-in"))
-      .finally(() => setBusy(false));
-  }, [refresh]);
-
-  async function submit(event: React.FormEvent) {
-    event.preventDefault();
-    setError("");
-    setBusy(true);
-    try {
-      const result =
-        mode === "login"
-          ? await authClient.signIn.email({ email, password })
-          : await authClient.signUp.email({ name, email, password });
-      if (result.error) {
-        setError(result.error.message ?? "Authentication failed");
-        return;
-      }
-      const user = await refresh({ fresh: true });
-      if (user) window.history.replaceState({}, "", user.role === "organizer" ? "/#organizer" : "/#events");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Authentication failed");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function googleSignIn() {
-    setError("");
-    setBusy(true);
-    try {
-      await authClient.signIn.social({
-        provider: "google",
-        callbackURL: `${window.location.origin}/#auth-callback`
-      });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Google sign-in failed");
-      setBusy(false);
-    }
-  }
-
   return (
     <main className="auth-stage">
       <section className="auth-hero">
@@ -67,12 +10,12 @@ export function AuthPage() {
           <h1>Book the seat before the city does.</h1>
           <p>Queue fairly, watch seats move live, and checkout before your hold expires.</p>
           <div className="trust-strip">
-            <span><ShieldCheck size={16} /> Neon Auth</span>
+            <span><ShieldCheck size={16} /> Clerk Auth</span>
             <span><Ticket size={16} /> Redis holds</span>
             <span><Mail size={16} /> Stripe test checkout</span>
           </div>
         </div>
-        <form onSubmit={submit} className="auth-card">
+        <div className="auth-card">
           <div className="auth-brand">
             <Ticket size={24} />
             <div>
@@ -80,24 +23,18 @@ export function AuthPage() {
               <span>Sign in to continue</span>
             </div>
           </div>
-          <div className="segment">
-            <button type="button" className={mode === "login" ? "active" : ""} onClick={() => setMode("login")}>Login</button>
-            <button type="button" className={mode === "register" ? "active" : ""} onClick={() => setMode("register")}>Sign up</button>
-          </div>
-          <button type="button" className="google-button" onClick={googleSignIn} disabled={busy}>
-            <Chrome size={18} /> Continue with Google
-          </button>
-          <div className="divider"><span>or use email</span></div>
-          {mode === "register" && (
-            <label>Name<input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" /></label>
-          )}
-          <label>Email<input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" /></label>
-          <label>Password<input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 8 characters" /></label>
-          {error && <p className="error">{error}</p>}
-          <button className="primary" type="submit" disabled={busy}>
-            {busy ? "Please wait..." : mode === "login" ? "Log in" : "Create account"}
-          </button>
-        </form>
+          <SignInButton mode="modal" fallbackRedirectUrl="/" forceRedirectUrl="/">
+            <button className="google-button" type="button">
+              <Chrome size={18} /> Continue with Clerk
+            </button>
+          </SignInButton>
+          <SignUpButton mode="modal" fallbackRedirectUrl="/" forceRedirectUrl="/">
+            <button className="primary" type="button">
+              Create account
+            </button>
+          </SignUpButton>
+          <p className="auth-note">Use Google, email, or any provider enabled in your Clerk dashboard.</p>
+        </div>
       </section>
     </main>
   );

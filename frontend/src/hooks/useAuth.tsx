@@ -1,60 +1,65 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { useAuth as useClerkAuth, useClerk, useUser } from "@clerk/clerk-react";
 import { api, type User } from "../api/client";
-import { authClient } from "../auth";
 
 interface AuthState {
   user: User | null;
   token: string | null;
   loading: boolean;
-  refresh: (options?: { showLoading?: boolean; fresh?: boolean }) => Promise<User | null>;
+  refresh: (options?: { showLoading?: boolean }) => Promise<User | null>;
   logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthState | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const clerkAuth = useClerkAuth();
+  const clerkUser = useUser();
+  const clerk = useClerk();
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(true);
 
-  const refresh = useCallback(async (options: { showLoading?: boolean; fresh?: boolean } = {}) => {
-    const showLoading = options.showLoading ?? true;
-    if (showLoading) setLoading(true);
-    try {
-      const session = await authClient.getSession(
-        options.fresh ? { query: { disableCookieCache: true } } : undefined
-      );
-      if (!session.data?.session) {
-        setToken(null);
-        setUser(null);
-        return null;
+  const refresh = useCallback(
+    async (options: { showLoading?: boolean } = {}) => {
+      const showLoading = options.showLoading ?? true;
+      if (showLoading) setSyncing(true);
+      try {
+        if (!clerkAuth.isLoaded || !clerkAuth.isSignedIn) {
+          setToken(null);
+          setUser(null);
+          return null;
+        }
+        const nextToken = await clerkAuth.getToken();
+        if (!nextToken) {
+          setToken(null);
+          setUser(null);
+          return null;
+        }
+        const profile = await api.me(nextToken);
+        setToken(nextToken);
+        setUser(profile.user);
+        return profile.user;
+      } finally {
+        if (showLoading) setSyncing(false);
       }
-      const tokenResult = await authClient.token();
-      const nextToken = tokenResult.data?.token;
-      if (!nextToken) {
-        setToken(null);
-        setUser(null);
-        return null;
-      }
-      const profile = await api.me(nextToken);
-      setToken(nextToken);
-      setUser(profile.user);
-      return profile.user;
-    } finally {
-      if (showLoading) setLoading(false);
-    }
-  }, []);
+    },
+    [clerkAuth.isLoaded, clerkAuth.isSignedIn, clerkAuth.getToken]
+  );
 
   useEffect(() => {
     localStorage.removeItem("flash.token");
     localStorage.removeItem("flash.user");
-    const isAuthCallback = window.location.hash === "#auth-callback" || window.location.pathname === "/auth/callback";
-    refresh({ fresh: isAuthCallback }).catch(() => {
+  }, []);
+
+  useEffect(() => {
+    if (!clerkAuth.isLoaded || !clerkUser.isLoaded) return;
+    refresh().catch(() => {
       setToken(null);
       setUser(null);
-      setLoading(false);
+      setSyncing(false);
     });
-  }, [refresh]);
+  }, [clerkAuth.isLoaded, clerkAuth.isSignedIn, clerkUser.isLoaded, clerkUser.user?.id, refresh]);
 
   useEffect(() => {
     const id = window.setInterval(() => {
@@ -67,15 +72,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     () => ({
       user,
       token,
-      loading,
+      loading: !clerkAuth.isLoaded || !clerkUser.isLoaded || syncing,
       refresh,
       logout: async () => {
-        await authClient.signOut();
+        await clerk.signOut();
         setUser(null);
         setToken(null);
       }
     }),
-    [user, token, loading, refresh]
+    [user, token, clerkAuth.isLoaded, clerkUser.isLoaded, syncing, refresh, clerk]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

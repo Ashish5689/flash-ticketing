@@ -36,7 +36,7 @@ export async function upsertExternalUser(input: {
 }): Promise<UserRow> {
   const result = await pool.query<UserRow>(
     `INSERT INTO users (email, name, role, password_hash)
-     VALUES ($1, $2, $3, 'neon-auth')
+     VALUES ($1, $2, $3, 'external-auth')
      ON CONFLICT (email)
      DO UPDATE SET
        name = EXCLUDED.name,

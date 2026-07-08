@@ -19,9 +19,9 @@ services:
         sync: false
       - key: JWT_SECRET
         sync: false
-      - key: NEON_AUTH_BASE_URL
+      - key: CLERK_SECRET_KEY
         sync: false
-      - key: NEON_AUTH_JWKS_URL
+      - key: CLERK_PUBLISHABLE_KEY
         sync: false
       - key: ORGANIZER_EMAILS
         sync: false
@@ -52,5 +52,5 @@ services:
         sync: false
       - key: VITE_STRIPE_PUBLISHABLE_KEY
         sync: false
-      - key: VITE_NEON_AUTH_URL
+      - key: VITE_CLERK_PUBLISHABLE_KEY
         sync: false

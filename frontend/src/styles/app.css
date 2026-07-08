@@ -226,6 +226,14 @@ button {
   font-size: 13px;
 }
 
+.auth-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+  text-align: center;
+}
+
 .segment {
   display: grid;
   grid-template-columns: 1fr 1fr;

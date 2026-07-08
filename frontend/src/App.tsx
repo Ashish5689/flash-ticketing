@@ -32,7 +32,7 @@ export function App() {
       window.history.replaceState({}, "", "/");
       return;
     }
-    if (window.location.hash === "#events" || window.location.hash === "#auth-callback") {
+    if (window.location.hash === "#events") {
       setView("events");
       window.history.replaceState({}, "", "/");
       return;

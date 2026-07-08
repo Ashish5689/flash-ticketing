@@ -9,7 +9,7 @@ A full-stack flash-sale ticketing system for high-demand events. The project dem
 - Database: PostgreSQL, recommended managed provider: Neon
 - Hot path/cache: Redis, supports either Redis URL or Upstash REST URL/token
 - Real time: WebSockets using `ws`
-- Auth: Neon Auth with email/password and Google sign-in
+- Auth: Clerk with email/password and Google sign-in
 - Payments: Stripe test mode
 - Local infra option: Docker Compose
 - Deployment: Render Web Service for backend, Render Static Site for frontend
@@ -54,8 +54,8 @@ UPSTASH_REDIS_REST_URL=https://example.upstash.io
 UPSTASH_REDIS_REST_TOKEN=replace-me
 
 JWT_SECRET=replace-with-a-long-random-secret
-NEON_AUTH_BASE_URL=https://ep-xxx.neonauth.us-east-1.aws.neon.tech/neondb/auth
-NEON_AUTH_JWKS_URL=https://ep-xxx.neonauth.us-east-1.aws.neon.tech/neondb/auth/.well-known/jwks.json
+CLERK_SECRET_KEY=sk_test_replace_me
+CLERK_PUBLISHABLE_KEY=pk_test_replace_me
 ORGANIZER_EMAILS=organizer@example.com,admin@admin.com
 CORS_ORIGIN=http://localhost:5173
 STRIPE_SECRET_KEY=sk_test_replace_me
@@ -77,7 +77,7 @@ Set these in `frontend/.env` locally, and in the Render Static Site environment 
 VITE_API_URL=http://localhost:4000
 VITE_WS_URL=ws://localhost:4000/ws
 VITE_STRIPE_PUBLISHABLE_KEY=pk_test_replace_me
-VITE_NEON_AUTH_URL=https://ep-xxx.neonauth.us-east-1.aws.neon.tech/neondb/auth
+VITE_CLERK_PUBLISHABLE_KEY=pk_test_replace_me
 ```
 
 For Render, put frontend variables in:
@@ -85,6 +85,21 @@ For Render, put frontend variables in:
 `Render Dashboard -> flash-ticketing-web -> Environment`
 
 Important: Vite env vars are baked into the frontend at build time. After changing frontend env vars in Render, redeploy the static site.
+
+### Clerk Setup
+
+In Clerk, enable the providers you want, such as Google and email/password. Add these redirect origins in the Clerk dashboard:
+
+```text
+http://localhost:5173
+https://your-render-static-site.onrender.com
+```
+
+The backend maps users to app roles this way:
+
+- `ORGANIZER_EMAILS` are treated as organizers.
+- Clerk `publicMetadata.role` or `privateMetadata.role` values of `admin` or `organizer` are treated as organizers.
+- Everyone else is a buyer.
 
 ## Local Setup
 
@@ -145,7 +160,7 @@ pm_card_visa
 
 Buyer flow:
 
-1. Log in with Neon Auth email/password or Google.
+1. Log in with Clerk email/password or Google.
 2. Open an event.
 3. Join the waiting room.
 4. Wait for admission.
@@ -271,8 +286,8 @@ REDIS_URL
 UPSTASH_REDIS_REST_URL
 UPSTASH_REDIS_REST_TOKEN
 JWT_SECRET
-NEON_AUTH_BASE_URL
-NEON_AUTH_JWKS_URL
+CLERK_SECRET_KEY
+CLERK_PUBLISHABLE_KEY
 ORGANIZER_EMAILS
 CORS_ORIGIN
 STRIPE_SECRET_KEY
@@ -298,7 +313,7 @@ Set frontend env vars in the frontend static site:
 VITE_API_URL=https://your-render-api.onrender.com
 VITE_WS_URL=wss://your-render-api.onrender.com/ws
 VITE_STRIPE_PUBLISHABLE_KEY=pk_test_...
-VITE_NEON_AUTH_URL=https://your-neon-auth-host/neondb/auth
+VITE_CLERK_PUBLISHABLE_KEY=pk_test_...
 ```
 
 Set backend `CORS_ORIGIN` to the frontend Render URL:
