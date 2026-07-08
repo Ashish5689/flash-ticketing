@@ -34,6 +34,11 @@ export function EventDetail({
           <div>
             <span className="pill">Flash sale</span>
             <h2>{event.name}</h2>
+            <div className="detail-meta">
+              <span>{event.status}</span>
+              <span>{event.totalSeats} seats</span>
+              <span>{event.availableCount} available</span>
+            </div>
             <p><MapPin size={15} /> {event.venue}</p>
             <p><CalendarClock size={15} /> {new Date(event.startsAt).toLocaleString()}</p>
           </div>
