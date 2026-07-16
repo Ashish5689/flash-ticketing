@@ -1,6 +1,10 @@
 import express from 'express';
 import request from 'supertest';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+vi.mock('../src/config/redis.js', () => ({
+  redis: { get: vi.fn().mockResolvedValue(null) },
+}));
 
 import { env } from '../src/config/env.js';
 import { requireAuth, requireRole } from '../src/middleware/auth.js';
