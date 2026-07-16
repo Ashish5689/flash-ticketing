@@ -14,11 +14,13 @@ export default function HomePage() {
   const [language, setLanguage] = useState<(typeof languageFilters)[number]>('All');
   const moviesQuery = useQuery({ queryKey: ['movies'], queryFn: () => getMovies() });
   const today = new Date().toISOString().slice(0, 10);
-  const { nowShowing, comingSoon } = useMemo(() => {
+  const { nowShowing, events, comingSoon } = useMemo(() => {
     const visible = moviesQuery.data ?? [];
+    const movieCatalog = visible.filter((item) => item.contentType === 'movie');
     return {
-      nowShowing: visible.filter((movie) => movie.releaseDate <= today),
-      comingSoon: visible.filter((movie) => movie.releaseDate > today),
+      nowShowing: movieCatalog.filter((movie) => movie.releaseDate <= today),
+      events: visible.filter((item) => item.contentType === 'event'),
+      comingSoon: movieCatalog.filter((movie) => movie.releaseDate > today),
     };
   }, [moviesQuery.data, today]);
   const filtered =
@@ -39,16 +41,18 @@ export default function HomePage() {
           <div className="mx-auto grid max-w-content gap-10 px-5 py-10 sm:px-8 lg:grid-cols-[1fr_0.8fr] lg:items-center lg:py-12">
             <div>
               <h1 className="max-w-3xl text-4xl font-bold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
-                What do you want to watch?
+                What do you want to experience?
               </h1>
-              <p className="mt-4 text-lg text-muted">Discover movies playing near you.</p>
+              <p className="mt-4 text-lg text-muted">
+                Discover movies and live events happening near you.
+              </p>
               <form className="relative mt-7 max-w-xl" onSubmit={search}>
                 <SearchIcon />
                 <input
-                  aria-label="Search movies"
+                  aria-label="Search movies and events"
                   className="min-h-14 w-full rounded-lg border border-border bg-surface pl-12 pr-28 text-base shadow-sm placeholder:text-muted focus:border-focus"
                   name="q"
-                  placeholder="Search movies"
+                  placeholder="Search movies and events"
                 />
                 <Button className="absolute right-1.5 top-1.5" type="submit">
                   Search
@@ -113,6 +117,32 @@ export default function HomePage() {
             ) : null}
           </div>
         </section>
+
+        {events.length > 0 ? (
+          <section className="border-t border-border bg-surface px-5 py-10 sm:px-8" id="events">
+            <div className="mx-auto max-w-content">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">Live events</h2>
+                  <p className="mt-2 text-sm text-muted">
+                    Concerts, comedy, dance, and stage experiences in Mumbai.
+                  </p>
+                </div>
+                <Link
+                  className="text-sm font-semibold text-brand hover:text-brand-hover"
+                  to="/movies?contentType=event"
+                >
+                  See all events
+                </Link>
+              </div>
+              <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:gap-6">
+                {events.map((event) => (
+                  <MovieCard key={event.id} movie={event} />
+                ))}
+              </div>
+            </div>
+          </section>
+        ) : null}
 
         {comingSoon.length > 0 ? (
           <section className="border-t border-border bg-surface px-5 py-10 sm:px-8">

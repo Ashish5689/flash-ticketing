@@ -43,6 +43,13 @@
       "when": 1784202634782,
       "tag": "0005_medical_ogun",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1784220625984,
+      "tag": "0006_sour_magma",
+      "breakpoints": true
     }
   ]
 }

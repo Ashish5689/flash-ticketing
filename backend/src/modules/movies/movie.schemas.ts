@@ -14,6 +14,7 @@ const managedAssetKeySchema = z
   .regex(/^movies\/(posters|banners)\/[0-9a-f-]+\.webp$/, 'Use a managed movie media asset key');
 
 export const movieInputSchema = z.object({
+  contentType: z.enum(['movie', 'event']).default('movie'),
   title: z.string().trim().min(1).max(200),
   description: z.string().trim().min(20).max(5000),
   posterUrl: assetLocationSchema,
@@ -34,6 +35,7 @@ export const movieUpdateSchema = movieInputSchema
   .refine((value) => Object.keys(value).length > 0, 'Provide at least one field to update');
 
 export const movieListQuerySchema = z.object({
+  contentType: z.enum(['movie', 'event']).optional(),
   q: z.string().trim().max(100).optional(),
   genre: z.string().trim().max(40).optional(),
   language: z.string().trim().max(40).optional(),

@@ -16,6 +16,7 @@ type MovieQuery = z.infer<typeof movieListQuerySchema>;
 const movieResponseSelection = {
   id: movies.id,
   title: movies.title,
+  contentType: movies.contentType,
   description: movies.description,
   posterUrl: movies.posterUrl,
   bannerUrl: movies.bannerUrl,
@@ -35,6 +36,7 @@ function filters(query: MovieQuery, publicOnly: boolean) {
   if (publicOnly) conditions.push(eq(movies.status, 'published'));
   else if (query.status) conditions.push(eq(movies.status, query.status));
   if (query.q) conditions.push(ilike(movies.title, `%${query.q}%`));
+  if (query.contentType) conditions.push(eq(movies.contentType, query.contentType));
   if (query.genre) conditions.push(arrayContains(movies.genres, [query.genre]));
   if (query.language) conditions.push(arrayContains(movies.languages, [query.language]));
   return conditions.length > 0 ? and(...conditions) : undefined;

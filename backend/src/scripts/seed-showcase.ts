@@ -10,8 +10,8 @@ import { createShow, publishShow } from '../modules/shows/show.service.js';
 
 const organizerEmail = 'showcase.organizer@flash-ticketing.local';
 const theaterName = 'Silver City Mumbai';
-const screenName = 'Screen 1';
-const showTimes = ['10:00', '13:00', '16:00', '19:00', '22:00'];
+const movieShowTimes = ['10:00', '13:00', '16:00', '19:00'];
+const eventShowTimes = ['11:00', '16:00', '21:00'];
 
 const layout: ScreenLayout = {
   rows: [
@@ -24,6 +24,18 @@ const layout: ScreenLayout = {
     { label: 'G', seatCount: 8, tier: 'RECLINER' },
   ],
   aisleAfterColumns: [4, 8],
+};
+
+const eventLayout: ScreenLayout = {
+  rows: [
+    { label: 'A', seatCount: 16, tier: 'CLASSIC' },
+    { label: 'B', seatCount: 16, tier: 'CLASSIC' },
+    { label: 'C', seatCount: 16, tier: 'CLASSIC' },
+    { label: 'D', seatCount: 16, tier: 'PRIME' },
+    { label: 'E', seatCount: 16, tier: 'PRIME' },
+    { label: 'F', seatCount: 12, tier: 'RECLINER' },
+  ],
+  aisleAfterColumns: [4, 12],
 };
 
 function indiaDateAfter(days: number) {
@@ -87,16 +99,16 @@ async function ensureTheater(organizerId: string) {
   return created;
 }
 
-async function ensureScreen(theaterId: string) {
+async function ensureScreen(theaterId: string, name: string, screenLayout: ScreenLayout) {
   const [existing] = await db
     .select()
     .from(screens)
-    .where(and(eq(screens.theaterId, theaterId), eq(screens.name, screenName)))
+    .where(and(eq(screens.theaterId, theaterId), eq(screens.name, name)))
     .limit(1);
   if (existing) {
     const [updated] = await db
       .update(screens)
-      .set({ layout, updatedAt: new Date() })
+      .set({ layout: screenLayout, updatedAt: new Date() })
       .where(eq(screens.id, existing.id))
       .returning();
     if (!updated) throw new Error('Could not update showcase screen');
@@ -105,7 +117,7 @@ async function ensureScreen(theaterId: string) {
 
   const [created] = await db
     .insert(screens)
-    .values({ theaterId, name: screenName, layout })
+    .values({ theaterId, name, layout: screenLayout })
     .returning();
   if (!created) throw new Error('Could not create showcase screen');
   return created;
@@ -114,9 +126,13 @@ async function ensureScreen(theaterId: string) {
 async function seedShowcase() {
   const organizer = await ensureOrganizer();
   const theater = await ensureTheater(organizer.id);
-  const screen = await ensureScreen(theater.id);
+  const [screenA, screenB, eventStage] = await Promise.all([
+    ensureScreen(theater.id, 'Showcase Screen A', layout),
+    ensureScreen(theater.id, 'Showcase Screen B', layout),
+    ensureScreen(theater.id, 'Live Events Stage', eventLayout),
+  ]);
   const catalog = await db
-    .select({ id: movies.id, title: movies.title })
+    .select({ id: movies.id, title: movies.title, contentType: movies.contentType })
     .from(movies)
     .where(eq(movies.status, 'published'))
     .orderBy(asc(movies.title));
@@ -124,8 +140,16 @@ async function seedShowcase() {
   let createdCount = 0;
   for (let dayOffset = 1; dayOffset <= 5; dayOffset += 1) {
     const date = indiaDateAfter(dayOffset);
-    for (const [index, movie] of catalog.entries()) {
-      const time = showTimes[index % showTimes.length];
+    let movieIndex = 0;
+    let eventIndex = 0;
+    for (const movie of catalog) {
+      const isEvent = movie.contentType === 'event';
+      const screen = isEvent ? eventStage : movieIndex % 2 === 0 ? screenA : screenB;
+      const slot = isEvent ? eventIndex : Math.floor(movieIndex / 2);
+      const schedule = isEvent ? eventShowTimes : movieShowTimes;
+      const time = schedule[slot % schedule.length];
+      if (isEvent) eventIndex += 1;
+      else movieIndex += 1;
       const startsAt = new Date(`${date}T${time}:00+05:30`);
       const [existing] = await db
         .select({ id: shows.id })
@@ -150,7 +174,7 @@ async function seedShowcase() {
   }
 
   process.stdout.write(
-    `Showcase ready: ${catalog.length} movies, ${createdCount} new shows, ${theater.name}.\n`,
+    `Showcase ready: ${catalog.length} listings, ${createdCount} new shows, ${theater.name}.\n`,
   );
 }
 

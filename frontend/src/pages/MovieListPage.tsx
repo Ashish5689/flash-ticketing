@@ -14,15 +14,17 @@ export default function MovieListPage() {
   const language = params.get('language') ?? '';
   const genre = params.get('genre') ?? '';
   const city = params.get('city') ?? '';
+  const contentType = params.get('contentType') ?? '';
   const facetsQuery = useQuery({ queryKey: ['movie-facets'], queryFn: getMovieFacets });
   const moviesQuery = useQuery({
-    queryKey: ['movies', deferredSearch, language, genre, city],
+    queryKey: ['movies', deferredSearch, language, genre, city, contentType],
     queryFn: () =>
       getMovies({
         q: deferredSearch || undefined,
         language: language || undefined,
         genre: genre || undefined,
         city: city || undefined,
+        contentType: (contentType || undefined) as 'movie' | 'event' | undefined,
       }),
   });
 
@@ -37,10 +39,10 @@ export default function MovieListPage() {
     <CatalogShell>
       <main className="mx-auto w-full max-w-content flex-1 px-5 py-10 sm:px-8">
         <div className="max-w-2xl">
-          <h1 className="text-4xl font-bold tracking-tight">Movies</h1>
-          <p className="mt-3 text-muted">Browse every published movie in the catalog.</p>
+          <h1 className="text-4xl font-bold tracking-tight">Movies & events</h1>
+          <p className="mt-3 text-muted">Browse every published movie and live event.</p>
         </div>
-        <div className="mt-8 grid gap-3 rounded-lg border border-border bg-surface p-4 sm:grid-cols-2 lg:grid-cols-[1fr_12rem_12rem_12rem]">
+        <div className="mt-8 grid gap-3 rounded-lg border border-border bg-surface p-4 sm:grid-cols-2 lg:grid-cols-[1fr_10rem_11rem_11rem_11rem]">
           <Input
             aria-label="Search movie catalog"
             onChange={(event) => {
@@ -50,6 +52,15 @@ export default function MovieListPage() {
             placeholder="Search by title"
             value={search}
           />
+          <Select
+            aria-label="Filter by content type"
+            onChange={(event) => setFilter('contentType', event.target.value)}
+            value={contentType}
+          >
+            <option value="">All types</option>
+            <option value="movie">Movies</option>
+            <option value="event">Events</option>
+          </Select>
           <Select
             aria-label="Filter by language"
             onChange={(event) => setFilter('language', event.target.value)}
@@ -88,12 +99,12 @@ export default function MovieListPage() {
         ) : null}
         {moviesQuery.isError ? (
           <p className="mt-8 rounded bg-brand-soft p-4 text-brand">
-            The movie catalog could not be loaded.
+            The catalog could not be loaded.
           </p>
         ) : null}
         {moviesQuery.data?.length === 0 ? (
           <div className="mt-8 rounded-lg border border-dashed border-border bg-surface px-6 py-16 text-center">
-            <h2 className="text-xl font-bold">No movies found</h2>
+            <h2 className="text-xl font-bold">No listings found</h2>
             <p className="mt-2 text-sm text-muted">Try another title, language, or genre.</p>
           </div>
         ) : null}

@@ -22,6 +22,23 @@ describe('Phase 2 request schemas', () => {
     expect(movieInputSchema.safeParse({ ...input, rating: 10.1 }).success).toBe(false);
   });
 
+  it('accepts event catalog entries through the shared ticketing model', () => {
+    const event = movieInputSchema.parse({
+      contentType: 'event',
+      title: 'Live Showcase',
+      description: 'A live stage performance configured through the shared booking catalog.',
+      posterUrl: '/posters/skybound.png',
+      genres: ['Theater'],
+      languages: ['English'],
+      durationMin: 120,
+      certificate: 'U',
+      rating: 8.5,
+      releaseDate: '2026-07-18',
+      status: 'published',
+    });
+    expect(event.contentType).toBe('event');
+  });
+
   it('rejects duplicate row labels and accepts a tiered layout', () => {
     const valid = {
       name: 'Screen 1',

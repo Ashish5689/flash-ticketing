@@ -16,6 +16,7 @@ import {
 import { users } from './users.js';
 
 export const movieStatus = pgEnum('movie_status', ['draft', 'published', 'archived']);
+export const catalogContentType = pgEnum('catalog_content_type', ['movie', 'event']);
 
 export const movies = pgTable(
   'movies',
@@ -27,6 +28,7 @@ export const movies = pgTable(
     posterAssetKey: varchar('poster_asset_key', { length: 255 }),
     bannerUrl: varchar('banner_url', { length: 2048 }),
     bannerAssetKey: varchar('banner_asset_key', { length: 255 }),
+    contentType: catalogContentType('content_type').default('movie').notNull(),
     genres: text('genres').array().notNull(),
     languages: text('languages').array().notNull(),
     durationMin: integer('duration_min').notNull(),
@@ -40,6 +42,7 @@ export const movies = pgTable(
   },
   (table) => [
     index('movies_status_release_idx').on(table.status, table.releaseDate),
+    index('movies_content_type_status_idx').on(table.contentType, table.status),
     index('movies_genres_gin_idx').using('gin', table.genres),
     index('movies_languages_gin_idx').using('gin', table.languages),
     check('movies_duration_positive', sql`${table.durationMin} > 0`),

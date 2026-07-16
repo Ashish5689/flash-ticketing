@@ -23,7 +23,13 @@ const queryString = (params: Record<string, string | undefined>) => {
 };
 
 export async function getMovies(
-  filters: { q?: string; genre?: string; language?: string; city?: string } = {},
+  filters: {
+    q?: string;
+    genre?: string;
+    language?: string;
+    city?: string;
+    contentType?: 'movie' | 'event';
+  } = {},
 ) {
   return (await apiRequest<{ movies: Movie[] }>(`/movies${queryString(filters)}`)).movies;
 }

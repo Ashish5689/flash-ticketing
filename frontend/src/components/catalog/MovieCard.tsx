@@ -15,6 +15,9 @@ export function MovieCard({ movie }: { movie: Movie }) {
         />
       </Link>
       <div className="flex flex-1 flex-col p-4">
+        <span className="mb-2 w-fit rounded-full bg-brand-soft px-2.5 py-1 text-xs font-semibold capitalize text-brand">
+          {movie.contentType}
+        </span>
         <h3 className="line-clamp-2 text-base font-bold leading-6">{movie.title}</h3>
         <p className="mt-1 line-clamp-1 text-sm text-muted">{movie.genres.join(', ')}</p>
         <p className="mt-2 text-xs text-muted">{movie.languages.join(' · ')}</p>

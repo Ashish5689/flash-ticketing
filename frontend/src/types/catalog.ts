@@ -1,8 +1,10 @@
 export type MovieStatus = 'draft' | 'published' | 'archived';
+export type CatalogContentType = 'movie' | 'event';
 
 export type Movie = {
   id: string;
   title: string;
+  contentType: CatalogContentType;
   description: string;
   posterUrl: string;
   bannerUrl: string | null;

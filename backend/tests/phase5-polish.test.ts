@@ -28,6 +28,7 @@ describe('Phase 5 API schemas', () => {
 
   it('accepts city catalog filters and Stripe Checkout identifiers', () => {
     expect(movieListQuerySchema.parse({ city: 'Mumbai' }).city).toBe('Mumbai');
+    expect(movieListQuerySchema.parse({ contentType: 'event' }).contentType).toBe('event');
     expect(
       checkoutSessionSchema.parse({
         holdId: '643e11e5-bc8b-4b57-82bd-f2ac967375f9',

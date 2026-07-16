@@ -91,6 +91,7 @@ export function MovieForm({
     try {
       setProcessingStage('saving');
       const input: MovieInput = {
+        contentType: String(data.get('contentType')) as MovieInput['contentType'],
         title: String(data.get('title')).trim(),
         description: String(data.get('description')).trim(),
         posterUrl: posterResult.url,
@@ -125,6 +126,10 @@ export function MovieForm({
 
   return (
     <form className="grid gap-5" onSubmit={(event) => void submit(event)}>
+      <Select defaultValue={movie?.contentType ?? 'movie'} label="Content type" name="contentType">
+        <option value="movie">Movie</option>
+        <option value="event">Event</option>
+      </Select>
       <Input defaultValue={movie?.title} label="Title" name="title" required />
       <div className="grid gap-4 lg:grid-cols-2">
         <ImagePickerField
