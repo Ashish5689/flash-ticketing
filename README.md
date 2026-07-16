@@ -2,6 +2,20 @@
 
 A full-stack movie and event ticketing platform built as an npm-workspaces monorepo.
 
+## Live deployment
+
+- Frontend: <https://flash-ticketing-neon.vercel.app>
+- API health: <https://dro7vidljm1jc.cloudfront.net/health>
+- Movie media: <https://d1f9tbdxdqavp.cloudfront.net>
+- Source: <https://github.com/Ashish5689/flash-ticketing>
+
+The React application is deployed on Vercel. The Dockerized API runs on an Amazon Linux EC2
+instance behind nginx and CloudFront HTTPS; the EC2 origin accepts traffic only from CloudFront.
+Neon Postgres, Upstash Redis, and Firebase remain managed services. Production credentials are
+encrypted in AWS Secrets Manager and resolved on the instance through AWS's local Workload
+Credentials Provider. GitHub Actions assumes an AWS role through OIDC and deploys through Systems
+Manager, so neither SSH nor long-lived AWS access keys are used by CI.
+
 ## Development quick start
 
 Requirements: Node.js 20+ and npm. Docker Desktop is optional for local service fallbacks.
@@ -41,6 +55,7 @@ npm run build
 npm run format:check
 npm run seed:admin
 npm run seed:catalog
+npm run seed:showcase
 # Live Firebase + Neon + Upstash auth verification (temporary identity is cleaned up):
 FIREBASE_WEB_API_KEY=<public-firebase-web-api-key> npm run verify:auth
 # Live Phase 2 API/role/ownership verification (temporary records are cleaned up):

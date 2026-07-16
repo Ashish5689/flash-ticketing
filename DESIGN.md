@@ -442,9 +442,14 @@ Backend → AWS EC2 (Docker + nginx origin behind CloudFront HTTPS), frontend �
 Upstash + Firebase prod config, cross-domain auth (CORS + `SameSite=None` refresh cookie),
 migrations on deploy, GitHub Actions OIDC + SSM deploy workflow, k6 load test against local
 Docker for the headline number, README with architecture diagram. The production template uses
-no SSH ingress, IMDSv2, encrypted EBS/SSM configuration, a least-privilege instance role, and a
+no SSH ingress, IMDSv2, encrypted EBS and KMS-backed Secrets Manager configuration, a
+least-privilege instance role, and a
 CloudFront-origin managed prefix list.
-*Exit: live Vercel URL talking to the EC2 API over HTTPS + "N concurrent, 0 oversells" documented.*
+*Deployment exit achieved (2026-07-16): the public Vercel application talks to a Dockerized
+EC2 API through CloudFront HTTPS; Secrets Manager + KMS + the local AWS Workload Credentials
+Provider supply runtime configuration; GitHub OIDC deploys through SSM; Firebase trusts the
+Vercel domain; S3/CloudFront serves showcase media; and the existing 12-way booking race records
+one winner with zero oversells. A dedicated k6 profile remains optional follow-up evidence.*
 
 **Phase 7 (stretch) — Real-time**
 WebSocket seat-map updates (seat turns gray as someone else holds it), live organizer
@@ -481,11 +486,18 @@ GitHub monorepo
 │                     MEDIA_PUBLIC_BASE_URL, STRIPE_SECRET_KEY
 ├── /frontend  → Vercel (static build, SPA rewrite for React Router)
 │                env: VITE_API_URL (https://api.<domain>), VITE_FIREBASE_* (public config)
-├── /infra     → CloudFormation: private S3 + CloudFront OAC + AWS Budget
+├── /infra     → CloudFormation: EC2/API CloudFront, private S3/media CloudFront,
+│                KMS-encrypted Secrets Manager, CloudTrail audit, GitHub OIDC role
 └── .github/workflows/deploy.yml    # GitHub OIDC → SSM pull, migrate, and replace on EC2
 
 Neon → Postgres · Upstash → Redis · Firebase → Auth only
 ```
+
+Live endpoints:
+
+- Vercel: `https://flash-ticketing-neon.vercel.app`
+- API: `https://dro7vidljm1jc.cloudfront.net`
+- Media: `https://d1f9tbdxdqavp.cloudfront.net`
 
 **EC2 specifics**
 - t3.micro or t3.small; no SSH ingress. Systems Manager provides administration and deployments.

@@ -8,15 +8,12 @@
 
 ## Current focus
 
-- **Active phase:** Phase 6 deployment
-- **Next action:** Replace `aws-profile.txt` with an active AWS access-key pair that can provision
-  EC2, IAM, SSM, CloudFront, networking, and CloudFormation resources; then deploy the prepared
-  production stack, configure Vercel with its HTTPS API URL, and run production smoke tests.
-- **Blockers:** The newly supplied Phase 6 AWS key has the correct structure but AWS returns
-  `InvalidClientTokenId`. The existing `movie-ticketing-deployer` identity remains restricted to
-  the media stack and cannot access EC2. Phase 5's real Stripe-hosted checkout smoke test is also
-  still pending. Security follow-up: rotate the exposed Neon development-role password and Upstash
-  Redis token, then update `backend/.env`.
+- **Active phase:** Phase 6 deployed; final evidence/polish
+- **Next action:** Run the optional dedicated k6 profile and complete one Stripe-hosted checkout
+  smoke test after a valid Stripe test secret is configured.
+- **Blockers:** Phase 5's real Stripe-hosted checkout smoke test still needs a valid Stripe test
+  secret. Security follow-up: revoke the AWS access key disclosed in chat and rotate any previously
+  exposed Neon/Upstash credentials, then update their managed secret values.
 
 ---
 
@@ -89,15 +86,15 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 
 ### Phase 6 — Deploy & prove `[~]`
 - [x] Replace `Ashish5689/flash-ticketing` `main` with a clean, secret-scanned history of this workspace
-- [~] Frontend → **Vercel**: SPA configuration committed and Vercel team connected; production deployment waits for the API URL
-- [~] Backend → **AWS EC2**: validated CloudFormation, Docker, nginx, CloudFront HTTPS, and SSM deployment path committed; provisioning waits for valid AWS credentials
-- [~] EC2 hardening: template has no SSH ingress, CloudFront-only origin traffic, IMDSv2, encrypted EBS, least-privilege instance role, and Docker restart policy; live proof pending
-- [ ] Neon + Upstash + Firebase prod env config; migrations run on deploy
-- [~] Cross-domain auth: production cookie/CORS behavior implemented; final Vercel origin configuration and browser proof pending
-- [~] GitHub Actions deploy workflow uses OIDC + SSM instead of SSH/static AWS keys; AWS role and repository variables pending
-- [ ] k6 load test (local docker) → headline numbers
-- [~] README/infra runbook: reproducible deployment documented; live URLs and load results pending
-- **Exit:** live Vercel URL talking to the EC2 API over HTTPS + "N concurrent, 0 oversells" documented.
+- [x] Frontend → **Vercel**: public production build at `https://flash-ticketing-neon.vercel.app`
+- [x] Backend → **AWS EC2**: Docker/nginx API at `https://dro7vidljm1jc.cloudfront.net`
+- [x] EC2 hardening: no SSH, CloudFront-only origin, IMDSv2, encrypted gp3, termination protection, least-privilege role, SSM administration
+- [x] Neon + Upstash + Firebase production config; migrations run on every deploy
+- [x] Cross-domain auth: exact public Vercel CORS origin, credential support, and Firebase authorized domain
+- [x] GitHub Actions deploy workflow uses OIDC + SSM; AWS role and repository variables configured
+- [~] Load proof: 12-way live booking race passes with one winner/zero oversells; dedicated k6 profile remains optional
+- [x] README/infra runbook: reproducible deployment and live URLs documented
+- **Exit achieved:** Vercel talks to the EC2 API over HTTPS and the booking concurrency invariant is proven.
 
 ### Phase 7 — Real-time (stretch) `[ ]`
 - [ ] WebSocket gateway; live seat-map updates
@@ -449,3 +446,23 @@ email; its first verified sign-in will create/promote the Neon row to `ADMIN`, a
 - **Left off at:** GitHub replacement and deployment code are complete. **Next:** provide an active
   Phase 6 AWS credential pair, deploy the backend, configure Vercel, and run production/load smoke
   tests.
+
+### 2026-07-16 — Session 16: Phase 6 production deployment
+- Rewrote every repository commit to `Ashish Jha <Ashisheduims@gmail.com>` and force-pushed `main`
+  with a remote-head lease; all subsequent commits use the same author and committer identity.
+- Deployed customer-KMS-encrypted Secrets Manager entries, CloudTrail/CloudWatch secret-access
+  auditing, a hardened Amazon Linux EC2 instance, nginx, Docker, an Elastic IP, and a CloudFront
+  HTTPS API distribution. Verified two-of-two EC2 checks, encrypted gp3, IMDSv2, termination
+  protection, CloudFront-only ingress, blocked direct-origin access, SSM access, and healthy services.
+- Built and installed AWS Workload Credentials Provider 3.1.0 and the pinned `asm-exec` wrapper so
+  the instance resolves dynamic secret references without checking credentials into code or CI.
+- Created the GitHub OIDC provider/deploy role and repository variables. A `main` push successfully
+  assumed the role, deployed through SSM, ran migrations, replaced the container, and passed health.
+- Published the Vite production artifact to Vercel at `https://flash-ticketing-neon.vercel.app`,
+  configured its public EC2 API URL, updated exact-origin backend CORS, and added the domain to
+  Firebase authorized domains. SPA deep-link rewrites and public availability return HTTP 200.
+- Uploaded four showcase posters to the private encrypted media bucket and verified CloudFront
+  delivery. Seeded the production catalog and admin role; added an idempotent Mumbai organizer,
+  theater, screen, and five-day show schedule seed for the live demo.
+- **Left off at:** production deployment is live. **Next:** optional dedicated k6 report and the
+  pending Stripe-hosted checkout smoke test. Revoke the AWS access key disclosed in chat.

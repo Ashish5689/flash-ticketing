@@ -76,7 +76,7 @@ aws secretsmanager put-secret-value \
 ```
 
 Deploy with the default VPC, a public subnet, and the regional CloudFront origin-facing managed
-prefix list. The stack uses an encrypted 12 GiB `gp3` volume, IMDSv2, an EC2 instance role, nginx,
+prefix list. The stack uses an encrypted 20 GiB `gp3` volume, IMDSv2, an EC2 instance role, nginx,
 Docker restart policies, and SSM instead of SSH. `deploy-flash-ticketing` pulls `main`, runs the
 Drizzle migrations, replaces the API container, and refuses success until `/health` responds.
 
