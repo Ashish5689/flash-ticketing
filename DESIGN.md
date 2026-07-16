@@ -171,12 +171,12 @@ theaters(id, organizer_id FK, name, city, address, status, created_at, updated_a
 screens(id, theater_id FK, name,                 -- "Screen 1", "IMAX"
         layout JSONB, created_at, updated_at)    -- rows[{label,seatCount,tier}], aisleAfterColumns[]
 
-movies(id, title, description, poster_url, banner_url,
+movies(id, content_type, title, description, poster_url, banner_url, -- movie|event
        poster_asset_key NULL, banner_asset_key NULL, -- managed S3 keys; legacy URLs remain valid
        genres TEXT[],
        languages TEXT[], duration_min, rating, release_date,
        certificate, status, created_at, updated_at, -- draft|published|archived
-       created_by FK)                            -- admin-managed catalog
+       created_by FK)                            -- shared movie/event catalog
 
 shows(id, movie_id FK, screen_id FK, starts_at, status,   -- scheduled|onsale|closed|cancelled
       created_at)                                          -- a "show" = one showtime

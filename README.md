@@ -13,8 +13,9 @@ TypeScript monorepo.
 | Movie media     | [View an S3-backed showcase poster](https://d1f9tbdxdqavp.cloudfront.net/movies/showcase/kuberaa.png) | Public delivery, private S3 origin |
 | Source code     | [Ashish5689/flash-ticketing](https://github.com/Ashish5689/flash-ticketing)                           | `main`                             |
 
-The live showcase contains five published movies, S3-hosted posters, a Mumbai cinema, an 80-seat
-tiered screen, and 25 scheduled shows across five days.
+The live showcase contains 11 published listings—eight movies and three live events—plus original
+S3-hosted posters/banners, a Mumbai venue, multiple tiered screens, and 80 scheduled shows across
+five days.
 
 > Stripe Checkout is implemented in test mode but requires a valid `sk_test_...` key. When it is
 > not configured, the application safely disables payment creation instead of exposing a broken

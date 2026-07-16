@@ -466,3 +466,23 @@ email; its first verified sign-in will create/promote the Neon row to `ADMIN`, a
   theater, screen, and five-day show schedule seed for the live demo.
 - **Left off at:** production deployment is live. **Next:** optional dedicated k6 report and the
   pending Stripe-hosted checkout smoke test. Revoke the AWS access key disclosed in chat.
+
+### 2026-07-16 — Session 17: Expanded movies, events, and live schedules
+- Added a backward-compatible `movie|event` catalog type through migration `0006_sour_magma.sql`.
+  Events remain explicit catalog entries while reusing the established show, seat inventory, hold,
+  booking, payment, analytics, and e-ticket pipeline.
+- Added three original fictional movies (`Monsoon Protocol`, `The Last Lighthouse`, and
+  `Quantum Garden`) plus three live events (`Neon Nights Live`, `Laugh Track Mumbai`, and
+  `Rhythm of India`) with complete descriptions, genres, languages, ratings, durations, and types.
+- Generated six original poster concepts, derived optimized 800×1200 poster and 1600×900 banner
+  WebP assets, stored the project copies under `docs/showcase-generated`, and uploaded all twelve
+  files to the encrypted private S3 media bucket. CloudFront delivery returns HTTP 200.
+- Added event type filters to the API and catalog page, event badges to cards, event selection in
+  the admin form, and a dedicated live-events section on the home page. The production Vercel
+  artifact now exposes these features at `https://flash-ticketing-neon.vercel.app`.
+- Expanded the idempotent showcase schedule across two cinema screens and a 92-seat live-events
+  stage. The keyless GitHub OIDC seed workflow upserted ten managed catalog entries and created 55
+  new on-sale shows. Production now reports 11 listings: eight movies and three events.
+- Verification passed: formatting, lint, typecheck, 34 backend tests, 10 frontend tests, both
+  production builds, GitHub OIDC deployment/seed workflows, event filtering, three next-day event
+  showtimes, 92-seat event maps, and S3/CloudFront poster and banner URLs.
