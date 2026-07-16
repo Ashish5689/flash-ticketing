@@ -141,17 +141,17 @@ function PosterStage() {
         <img
           alt="Kuberaa"
           className="h-64 w-44 -rotate-3 rounded-lg border border-muted object-cover shadow-md"
-          src="/posters/kuberaa.png"
+          src="https://d1f9tbdxdqavp.cloudfront.net/movies/showcase/kuberaa.png"
         />
         <img
           alt="Sitaare Zameen Par"
           className="z-10 h-72 w-48 rounded-lg border border-muted object-cover shadow-md"
-          src="/posters/sitaare-zameen-par.png"
+          src="https://d1f9tbdxdqavp.cloudfront.net/movies/showcase/sitaare-zameen-par.png"
         />
         <img
           alt="Skybound"
           className="h-64 w-44 rotate-3 rounded-lg border border-muted object-cover shadow-md"
-          src="/posters/skybound.png"
+          src="https://d1f9tbdxdqavp.cloudfront.net/movies/showcase/skybound.png"
         />
       </div>
     </div>

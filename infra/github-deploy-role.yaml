@@ -2,9 +2,6 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: GitHub OIDC role for SSM-based Flash Ticketing backend deployments.
 
 Parameters:
-  GitHubOidcProviderArn:
-    Type: String
-    Description: ARN of the account's token.actions.githubusercontent.com OIDC provider.
   RepositoryName:
     Type: String
     Default: Ashish5689/flash-ticketing
@@ -16,6 +13,18 @@ Parameters:
     AllowedPattern: '[a-z0-9-]+'
 
 Resources:
+  GitHubOidcProvider:
+    Type: AWS::IAM::OIDCProvider
+    Properties:
+      Url: https://token.actions.githubusercontent.com
+      ClientIdList:
+        - sts.amazonaws.com
+      Tags:
+        - Key: Application
+          Value: flash-ticketing
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
   GitHubDeployRole:
     Type: AWS::IAM::Role
     Properties:
@@ -25,7 +34,7 @@ Resources:
         Statement:
           - Effect: Allow
             Principal:
-              Federated: !Ref GitHubOidcProviderArn
+              Federated: !Ref GitHubOidcProvider
             Action: sts:AssumeRoleWithWebIdentity
             Condition:
               StringEquals:
