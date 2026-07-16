@@ -438,10 +438,12 @@ live verifier, and browser QA pass. Exit awaits a Stripe test secret and one rea
 smoke test before the product is called demo-ready.*
 
 **Phase 6 — Deploy & prove**
-Backend → AWS EC2 (Docker + nginx reverse proxy + HTTPS), frontend → Vercel, Neon + Upstash +
-Firebase prod config, cross-domain auth (CORS + `SameSite=None` refresh cookie), migrations on
-deploy, GitHub Actions deploy workflow, k6 load test against local docker for the headline
-number, README with architecture diagram.
+Backend → AWS EC2 (Docker + nginx origin behind CloudFront HTTPS), frontend → Vercel, Neon +
+Upstash + Firebase prod config, cross-domain auth (CORS + `SameSite=None` refresh cookie),
+migrations on deploy, GitHub Actions OIDC + SSM deploy workflow, k6 load test against local
+Docker for the headline number, README with architecture diagram. The production template uses
+no SSH ingress, IMDSv2, encrypted EBS/SSM configuration, a least-privilege instance role, and a
+CloudFront-origin managed prefix list.
 *Exit: live Vercel URL talking to the EC2 API over HTTPS + "N concurrent, 0 oversells" documented.*
 
 **Phase 7 (stretch) — Real-time**
@@ -473,23 +475,24 @@ Target: **backend on AWS EC2, frontend on Vercel** (managed data stays on free t
 
 ```
 GitHub monorepo
-├── /backend   → AWS EC2 (Ubuntu, Dockerized API behind nginx/Caddy + Let's Encrypt HTTPS)
+├── /backend   → AWS EC2 (Amazon Linux, Dockerized API behind nginx + CloudFront HTTPS)
 │                env: DATABASE_URL, REDIS_URL, JWT_ACCESS_SECRET, JWT_REFRESH_SECRET,
 │                     CORS_ORIGIN, GOOGLE_APPLICATION_CREDENTIALS, AWS_S3_BUCKET,
 │                     MEDIA_PUBLIC_BASE_URL, STRIPE_SECRET_KEY
 ├── /frontend  → Vercel (static build, SPA rewrite for React Router)
 │                env: VITE_API_URL (https://api.<domain>), VITE_FIREBASE_* (public config)
 ├── /infra     → CloudFormation: private S3 + CloudFront OAC + AWS Budget
-└── .github/workflows/deploy.yml    # build image → push registry → SSH pull + restart on EC2
+└── .github/workflows/deploy.yml    # GitHub OIDC → SSM pull, migrate, and replace on EC2
 
 Neon → Postgres · Upstash → Redis · Firebase → Auth only
 ```
 
 **EC2 specifics**
-- t3.micro (free tier, 12 months) or t3.small; security group: 80/443 open, port 22 restricted
-  to your IP.
-- Docker + docker-compose on the instance; nginx (or Caddy) terminates TLS and proxies to the API.
-- `restart: always` / systemd unit so the API survives reboots.
+- t3.micro or t3.small; no SSH ingress. Systems Manager provides administration and deployments.
+- Docker runs the API on loopback; host nginx proxies port 80. Only CloudFront's origin-facing
+  managed prefix list can reach the origin, and CloudFront supplies the public TLS endpoint.
+- `restart: unless-stopped` keeps the API alive across reboots. Each deployment pulls `main`, runs
+  Drizzle migrations with a build-stage image, replaces the API container, and waits for `/health`.
 - Option: run Postgres + Redis on the same instance via compose (one box, no external deps) —
   but no managed backups; Neon/Upstash recommended for the live demo.
 

@@ -8,11 +8,15 @@
 
 ## Current focus
 
-- **Active phase:** Phase 5 final external configuration
-- **Next action:** Add a Stripe test secret to `backend/.env`, restart the API, and run one real
-  hosted Checkout smoke test; then resume Silver-city showcase media/show seeding.
-- **Blockers:** Stripe test credentials are not configured. Security follow-up: rotate the exposed Neon development-role
-  password and Upstash Redis token, then update `backend/.env`.
+- **Active phase:** Phase 6 deployment
+- **Next action:** Replace `aws-profile.txt` with an active AWS access-key pair that can provision
+  EC2, IAM, SSM, CloudFront, networking, and CloudFormation resources; then deploy the prepared
+  production stack, configure Vercel with its HTTPS API URL, and run production smoke tests.
+- **Blockers:** The newly supplied Phase 6 AWS key has the correct structure but AWS returns
+  `InvalidClientTokenId`. The existing `movie-ticketing-deployer` identity remains restricted to
+  the media stack and cannot access EC2. Phase 5's real Stripe-hosted checkout smoke test is also
+  still pending. Security follow-up: rotate the exposed Neon development-role password and Upstash
+  Redis token, then update `backend/.env`.
 
 ---
 
@@ -83,15 +87,16 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 - [x] Rate limiting
 - **Exit pending:** configure Stripe test credentials and complete one hosted-checkout smoke test.
 
-### Phase 6 — Deploy & prove `[ ]`
-- [ ] Frontend → **Vercel**: static build, SPA rewrite for React Router, `VITE_API_URL` + `VITE_FIREBASE_*` env
-- [ ] Backend → **AWS EC2**: t3.micro, Docker + docker-compose, nginx/Caddy reverse proxy + HTTPS (Let's Encrypt)
-- [ ] EC2 hardening: security group 80/443 only (SSH restricted to my IP), `restart: always` / systemd
+### Phase 6 — Deploy & prove `[~]`
+- [x] Replace `Ashish5689/flash-ticketing` `main` with a clean, secret-scanned history of this workspace
+- [~] Frontend → **Vercel**: SPA configuration committed and Vercel team connected; production deployment waits for the API URL
+- [~] Backend → **AWS EC2**: validated CloudFormation, Docker, nginx, CloudFront HTTPS, and SSM deployment path committed; provisioning waits for valid AWS credentials
+- [~] EC2 hardening: template has no SSH ingress, CloudFront-only origin traffic, IMDSv2, encrypted EBS, least-privilege instance role, and Docker restart policy; live proof pending
 - [ ] Neon + Upstash + Firebase prod env config; migrations run on deploy
-- [ ] Cross-domain auth: CORS locked to Vercel origin (with credentials), refresh cookie `Secure; SameSite=None`
-- [ ] GitHub Actions deploy workflow (build image → push → EC2 pull + restart)
+- [~] Cross-domain auth: production cookie/CORS behavior implemented; final Vercel origin configuration and browser proof pending
+- [~] GitHub Actions deploy workflow uses OIDC + SSM instead of SSH/static AWS keys; AWS role and repository variables pending
 - [ ] k6 load test (local docker) → headline numbers
-- [ ] README: quickstart + architecture diagram + live URLs + results
+- [~] README/infra runbook: reproducible deployment documented; live URLs and load results pending
 - **Exit:** live Vercel URL talking to the EC2 API over HTTPS + "N concurrent, 0 oversells" documented.
 
 ### Phase 7 — Real-time (stretch) `[ ]`
@@ -424,3 +429,23 @@ email; its first verified sign-in will create/promote the Neon row to `ADMIN`, a
   Temporary Firebase/Neon QA identities and the held seat were removed afterward.
 - **Left off at:** Phase 5 application work complete. **Next:** add a Stripe test secret and perform
   one hosted-checkout smoke test; then resume showcase screens/media/shows.
+
+### 2026-07-16 — Session 15: Phase 6 repository and deployment foundation
+- Replaced `Ashish5689/flash-ticketing` `main` with a new clean history from this workspace using a
+  remote-head lease. A staged-content scan excluded all production URLs/credentials, and local
+  `.env` files, AWS credentials, Firebase Admin JSON, dependencies, and build output are ignored.
+- Added Vercel SPA routing, an EC2/CloudFront CloudFormation stack, encrypted SSM configuration,
+  an S3-scoped EC2 role, IMDSv2, encrypted EBS, CloudFront-only origin ingress, Docker/nginx health
+  deployment, Drizzle migrations on deploy, and graceful no-SSH Systems Manager administration.
+- Added a GitHub OIDC role template and GitHub Actions workflow that deploys through SSM without
+  static AWS keys. The project passed formatting, lint, typecheck, all 43 tests, production builds,
+  and CloudFormation template validation before publication.
+- Connected Vercel access was verified and the target team identified. The frontend production
+  deployment intentionally waits for the final CloudFront API URL so the first live build is not
+  configured against localhost or a placeholder.
+- The existing AWS media deployer can validate CloudFormation but cannot inspect/create EC2. The
+  newly supplied `aws-profile.txt` contains structurally valid key lengths but AWS rejects it with
+  `InvalidClientTokenId`; no Phase 6 AWS resources were created with that key.
+- **Left off at:** GitHub replacement and deployment code are complete. **Next:** provide an active
+  Phase 6 AWS credential pair, deploy the backend, configure Vercel, and run production/load smoke
+  tests.
