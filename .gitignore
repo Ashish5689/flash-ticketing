@@ -1,0 +1,14 @@
+node_modules/
+dist/
+coverage/
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+.vite/
+.vercel/
+.claude/
+aws-cli-profile.txt
+aws-profile.txt
+firebase-adminsdk*.json

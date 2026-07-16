@@ -1,0 +1,7 @@
+node_modules
+dist
+coverage
+backend/drizzle/meta
+docs/*.png
+DESIGN.md
+MEMORY.md

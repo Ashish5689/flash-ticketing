@@ -1,0 +1,319 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Flash Ticketing production API on EC2 behind CloudFront HTTPS.
+
+Metadata:
+  TemplateVersion: 1.0.0
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: production
+    AllowedPattern: '[a-z0-9-]+'
+  InstanceType:
+    Type: String
+    Default: t3.micro
+    AllowedValues:
+      - t3.micro
+      - t3.small
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+  PublicSubnetId:
+    Type: AWS::EC2::Subnet::Id
+  CloudFrontOriginPrefixListId:
+    Type: String
+    Description: Managed prefix list ID for com.amazonaws.global.cloudfront.origin-facing.
+  RepositoryUrl:
+    Type: String
+    Default: https://github.com/Ashish5689/flash-ticketing.git
+  RepositoryBranch:
+    Type: String
+    Default: main
+  MediaBucketName:
+    Type: String
+  BackendEnvParameterName:
+    Type: String
+    Default: /flash-ticketing/production/backend-env
+  FirebaseCredentialParameterName:
+    Type: String
+    Default: /flash-ticketing/production/firebase-admin
+  LatestAmiId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
+
+Resources:
+  ApiSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: CloudFront-only HTTP access to the Flash Ticketing API origin
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - Description: CloudFront origin traffic
+          IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          SourcePrefixListId: !Ref CloudFrontOriginPrefixListId
+      SecurityGroupEgress:
+        - Description: Outbound access for managed services and package installation
+          IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub 'flash-ticketing-api-${EnvironmentName}'
+        - Key: Application
+          Value: flash-ticketing
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  ApiInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub 'flash-ticketing-api-${EnvironmentName}'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+      Policies:
+        - PolicyName: flash-ticketing-runtime
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: MovieMediaObjects
+                Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:DeleteObject
+                Resource: !Sub 'arn:${AWS::Partition}:s3:::${MediaBucketName}/movies/*'
+              - Sid: DeploymentConfiguration
+                Effect: Allow
+                Action:
+                  - ssm:GetParameter
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${BackendEnvParameterName}'
+                  - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${FirebaseCredentialParameterName}'
+      Tags:
+        - Key: Application
+          Value: flash-ticketing
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  ApiInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref ApiInstanceRole
+
+  ApiInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref LatestAmiId
+      InstanceType: !Ref InstanceType
+      IamInstanceProfile: !Ref ApiInstanceProfile
+      SubnetId: !Ref PublicSubnetId
+      SecurityGroupIds:
+        - !Ref ApiSecurityGroup
+      MetadataOptions:
+        HttpEndpoint: enabled
+        HttpTokens: required
+        HttpPutResponseHopLimit: 2
+        InstanceMetadataTags: disabled
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            DeleteOnTermination: true
+            Encrypted: true
+            VolumeSize: 12
+            VolumeType: gp3
+      Tags:
+        - Key: Name
+          Value: !Sub 'flash-ticketing-api-${EnvironmentName}'
+        - Key: Application
+          Value: flash-ticketing
+        - Key: Environment
+          Value: !Ref EnvironmentName
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          set -euxo pipefail
+
+          dnf install -y docker git nginx jq
+          systemctl enable --now docker
+          systemctl enable --now nginx
+          systemctl enable --now amazon-ssm-agent
+
+          install -d -m 0755 /opt/flash-ticketing /etc/flash-ticketing
+          if [ ! -d /opt/flash-ticketing/.git ]; then
+            rm -rf /opt/flash-ticketing
+            git clone --branch '${RepositoryBranch}' --single-branch '${RepositoryUrl}' /opt/flash-ticketing
+          fi
+
+          cat >/etc/nginx/nginx.conf <<'NGINX_CORE'
+          user nginx;
+          worker_processes auto;
+          error_log /var/log/nginx/error.log notice;
+          pid /run/nginx.pid;
+
+          events {
+            worker_connections 1024;
+          }
+
+          http {
+            include /etc/nginx/mime.types;
+            default_type application/octet-stream;
+            sendfile on;
+            keepalive_timeout 65;
+            include /etc/nginx/conf.d/*.conf;
+          }
+          NGINX_CORE
+
+          cat >/etc/nginx/conf.d/flash-ticketing.conf <<'NGINX'
+          server {
+            listen 80 default_server;
+            server_name _;
+
+            location / {
+              proxy_pass http://127.0.0.1:4000;
+              proxy_http_version 1.1;
+              proxy_set_header Host $host;
+              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+              proxy_set_header X-Forwarded-Proto https;
+              proxy_set_header X-Request-Id $request_id;
+              proxy_connect_timeout 5s;
+              proxy_read_timeout 60s;
+            }
+          }
+          NGINX
+          nginx -t
+          systemctl reload nginx
+
+          cat >/usr/local/bin/deploy-flash-ticketing <<'DEPLOY'
+          #!/bin/bash
+          set -euo pipefail
+
+          REGION='${AWS::Region}'
+          ENV_PARAMETER='${BackendEnvParameterName}'
+          FIREBASE_PARAMETER='${FirebaseCredentialParameterName}'
+          REPOSITORY_BRANCH='${RepositoryBranch}'
+
+          install -d -m 0750 /etc/flash-ticketing
+          aws ssm get-parameter --region "$REGION" --name "$ENV_PARAMETER" --with-decryption --query Parameter.Value --output text > /etc/flash-ticketing/backend.env
+          aws ssm get-parameter --region "$REGION" --name "$FIREBASE_PARAMETER" --with-decryption --query Parameter.Value --output text > /etc/flash-ticketing/firebase-admin.json
+          chmod 0600 /etc/flash-ticketing/backend.env /etc/flash-ticketing/firebase-admin.json
+
+          cd /opt/flash-ticketing
+          git fetch origin "$REPOSITORY_BRANCH"
+          git reset --hard "origin/$REPOSITORY_BRANCH"
+
+          docker build --target build -t flash-ticketing-api-migrate:current backend
+          docker build -t flash-ticketing-api:current backend
+          docker run --rm --env-file /etc/flash-ticketing/backend.env flash-ticketing-api-migrate:current npm run db:migrate
+
+          docker rm -f flash-ticketing-api 2>/dev/null || true
+          docker run -d \
+            --name flash-ticketing-api \
+            --restart unless-stopped \
+            -p 127.0.0.1:4000:4000 \
+            --env-file /etc/flash-ticketing/backend.env \
+            -v /etc/flash-ticketing/firebase-admin.json:/run/secrets/firebase-admin.json:ro \
+            flash-ticketing-api:current
+
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:4000/health >/dev/null; then
+              docker image prune -f >/dev/null
+              exit 0
+            fi
+            sleep 2
+          done
+
+          docker logs --tail 100 flash-ticketing-api
+          exit 1
+          DEPLOY
+          chmod 0750 /usr/local/bin/deploy-flash-ticketing
+          /usr/local/bin/deploy-flash-ticketing
+
+  ApiElasticIp:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: !Sub 'flash-ticketing-api-${EnvironmentName}'
+        - Key: Application
+          Value: flash-ticketing
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  ApiElasticIpAssociation:
+    Type: AWS::EC2::EIPAssociation
+    Properties:
+      AllocationId: !GetAtt ApiElasticIp.AllocationId
+      InstanceId: !Ref ApiInstance
+
+  ApiDistribution:
+    Type: AWS::CloudFront::Distribution
+    DependsOn: ApiElasticIpAssociation
+    Properties:
+      DistributionConfig:
+        Comment: !Sub 'Flash Ticketing ${EnvironmentName} API'
+        Enabled: true
+        HttpVersion: http2and3
+        IPV6Enabled: true
+        PriceClass: PriceClass_100
+        Origins:
+          - Id: ec2-api
+            DomainName: !Join ['', [!GetAtt ApiElasticIp.PublicIp, '.sslip.io']]
+            CustomOriginConfig:
+              HTTPPort: 80
+              HTTPSPort: 443
+              OriginKeepaliveTimeout: 5
+              OriginProtocolPolicy: http-only
+              OriginReadTimeout: 60
+              OriginSSLProtocols:
+                - TLSv1.2
+        DefaultCacheBehavior:
+          AllowedMethods:
+            - DELETE
+            - GET
+            - HEAD
+            - OPTIONS
+            - PATCH
+            - POST
+            - PUT
+          CachedMethods:
+            - GET
+            - HEAD
+          CachePolicyId: 413f160f-65cd-4c7f-b8c3-8dd4dfbdbe6a
+          Compress: true
+          OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac
+          TargetOriginId: ec2-api
+          ViewerProtocolPolicy: redirect-to-https
+        ViewerCertificate:
+          CloudFrontDefaultCertificate: true
+          MinimumProtocolVersion: TLSv1.2_2021
+      Tags:
+        - Key: Application
+          Value: flash-ticketing
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+Outputs:
+  ApiInstanceId:
+    Description: EC2 instance managed through Systems Manager; no SSH ingress is opened.
+    Value: !Ref ApiInstance
+  ApiElasticIp:
+    Description: Stable EC2 origin address.
+    Value: !GetAtt ApiElasticIp.PublicIp
+  ApiDistributionDomainName:
+    Description: CloudFront hostname for the API.
+    Value: !GetAtt ApiDistribution.DomainName
+  ApiUrl:
+    Description: Public HTTPS API base URL.
+    Value: !Sub 'https://${ApiDistribution.DomainName}'
+  ApiInstanceRoleArn:
+    Description: Least-privilege runtime role used by the EC2 instance.
+    Value: !GetAtt ApiInstanceRole.Arn
