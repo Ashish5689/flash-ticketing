@@ -14,6 +14,7 @@
     "db:studio": "drizzle-kit studio",
     "seed:admin": "tsx src/scripts/seed-admin.ts",
     "seed:catalog": "tsx src/scripts/seed-catalog.ts",
+    "seed:showcase": "tsx src/scripts/seed-showcase.ts",
     "verify:auth": "tsx src/scripts/verify-auth-flow.ts",
     "verify:phase2": "tsx src/scripts/verify-phase-2.ts",
     "verify:phase3": "tsx src/scripts/verify-phase-3.ts",
