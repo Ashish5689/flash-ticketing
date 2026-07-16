@@ -56,20 +56,23 @@ The deployed EC2 service will use an instance role instead of `AWS_PROFILE`.
 
 `app-stack.yaml` deploys a hardened EC2 API origin with no SSH ingress. CloudFront is the only
 public HTTP client allowed by the security group and supplies the public HTTPS endpoint. Runtime
-configuration and the Firebase Admin credential are read from encrypted SSM parameters; the EC2
-instance role has access only to those parameters, Systems Manager, and `movies/*` objects in the
-existing media bucket.
+configuration and the Firebase Admin credential are read from customer-KMS-encrypted Secrets
+Manager entries with AWS's `asm-exec` dynamic-reference wrapper; the EC2 instance role has access
+only to those secrets, their KMS key, Systems Manager, and `movies/*` objects in the existing media
+bucket.
 
-Before deploying, create these encrypted parameters without committing their values:
+Deploy `secrets-stack.yaml` first, then populate the two retained secrets from the gitignored local
+files without printing their values. The stack also configures a multi-region management-event
+CloudTrail, encrypted/versioned log storage, and CloudWatch secret-access alarms.
 
 ```bash
-aws ssm put-parameter --type SecureString --overwrite \
-  --name /flash-ticketing/production/backend-env \
-  --value file://path/to/generated-production.env
+aws secretsmanager put-secret-value \
+  --secret-id flash-ticketing/production/backend-env \
+  --secret-string file://backend/.env
 
-aws ssm put-parameter --type SecureString --overwrite \
-  --name /flash-ticketing/production/firebase-admin \
-  --value file://path/to/firebase-admin.json
+aws secretsmanager put-secret-value \
+  --secret-id flash-ticketing/production/firebase-admin \
+  --secret-string file://path/to/firebase-admin.json
 ```
 
 Deploy with the default VPC, a public subnet, and the regional CloudFront origin-facing managed

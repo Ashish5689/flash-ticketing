@@ -30,12 +30,12 @@ Parameters:
     Default: main
   MediaBucketName:
     Type: String
-  BackendEnvParameterName:
+  BackendConfigSecretArn:
     Type: String
-    Default: /flash-ticketing/production/backend-env
-  FirebaseCredentialParameterName:
+  FirebaseCredentialSecretArn:
     Type: String
-    Default: /flash-ticketing/production/firebase-admin
+  SecretsKeyArn:
+    Type: String
   LatestAmiId:
     Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
     Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
@@ -92,10 +92,25 @@ Resources:
               - Sid: DeploymentConfiguration
                 Effect: Allow
                 Action:
-                  - ssm:GetParameter
+                  - secretsmanager:GetSecretValue
+                  - secretsmanager:DescribeSecret
                 Resource:
-                  - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${BackendEnvParameterName}'
-                  - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${FirebaseCredentialParameterName}'
+                  - !Ref BackendConfigSecretArn
+                  - !Ref FirebaseCredentialSecretArn
+                Condition:
+                  Bool:
+                    aws:SecureTransport: true
+              - Sid: DecryptDeploymentConfiguration
+                Effect: Allow
+                Action:
+                  - kms:Decrypt
+                  - kms:DescribeKey
+                Resource: !Ref SecretsKeyArn
+                Condition:
+                  Bool:
+                    aws:SecureTransport: true
+                  StringEquals:
+                    kms:ViaService: !Sub 'secretsmanager.${AWS::Region}.amazonaws.com'
       Tags:
         - Key: Application
           Value: flash-ticketing
@@ -113,7 +128,9 @@ Resources:
     Properties:
       ImageId: !Ref LatestAmiId
       InstanceType: !Ref InstanceType
+      DisableApiTermination: true
       IamInstanceProfile: !Ref ApiInstanceProfile
+      Monitoring: true
       SubnetId: !Ref PublicSubnetId
       SecurityGroupIds:
         - !Ref ApiSecurityGroup
@@ -125,9 +142,9 @@ Resources:
       BlockDeviceMappings:
         - DeviceName: /dev/xvda
           Ebs:
-            DeleteOnTermination: true
+            DeleteOnTermination: false
             Encrypted: true
-            VolumeSize: 12
+            VolumeSize: 20
             VolumeType: gp3
       Tags:
         - Key: Name
@@ -136,15 +153,67 @@ Resources:
           Value: flash-ticketing
         - Key: Environment
           Value: !Ref EnvironmentName
+        - Key: WorkloadType
+          Value: application-server
+        - Key: ManagedBy
+          Value: CloudFormation
+        - Key: Owner
+          Value: Ashish Jha
+        - Key: Project
+          Value: flash-ticketing
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash
-          set -euxo pipefail
+          set -euo pipefail
 
-          dnf install -y docker git nginx jq
+          dnf install -y docker git nginx jq python3
           systemctl enable --now docker
           systemctl enable --now nginx
           systemctl enable --now amazon-ssm-agent
+
+          if [ ! -f /swapfile ]; then
+            dd if=/dev/zero of=/swapfile bs=1M count=2048
+            chmod 600 /swapfile
+            mkswap /swapfile
+            swapon /swapfile
+            echo '/swapfile none swap sw 0 0' >> /etc/fstab
+          fi
+
+          curl --fail --silent --show-error --location \
+            'https://raw.githubusercontent.com/aws/agent-toolkit-for-aws/ab386bbd328b6ec92b3e079ef8d7859d074952e2/plugins/aws-core/skills/aws-secrets-manager/references/asm-exec' \
+            --output /usr/local/bin/asm-exec
+          chmod 0755 /usr/local/bin/asm-exec
+
+          dnf groupinstall -y 'Development Tools'
+          curl --proto '=https' --tlsv1.2 --silent --show-error --fail \
+            https://sh.rustup.rs | sh -s -- -y --profile minimal
+          git clone --branch v3.1.0 --depth 1 \
+            https://github.com/aws/aws-workload-credentials-provider.git \
+            /opt/aws-workload-credentials-provider-source
+          cd /opt/aws-workload-credentials-provider-source
+          /root/.cargo/bin/cargo build --release --locked --bin aws-workload-credentials-provider
+          install -d -m 0750 /etc/flash-ticketing
+          cat >/etc/flash-ticketing/workload-credentials-provider.toml <<'WCP_CONFIG'
+          [logging]
+          log_level = "INFO"
+          log_to_file = true
+
+          [capabilities.secrets_manager]
+          enabled = true
+          region = "${AWS::Region}"
+          http_port = 2773
+          max_conn = 20
+
+          [capabilities.secrets_manager.cache]
+          ttl_seconds = 300
+          cache_size = 10
+          WCP_CONFIG
+          cd aws_workload_credentials_provider_common/configuration
+          ./install \
+            --config /etc/flash-ticketing/workload-credentials-provider.toml \
+            --no-privileges \
+            --no-sudoers
+          systemctl is-active --quiet aws-workload-credentials-provider-sm
 
           install -d -m 0755 /opt/flash-ticketing /etc/flash-ticketing
           if [ ! -d /opt/flash-ticketing/.git ]; then
@@ -196,13 +265,20 @@ Resources:
           set -euo pipefail
 
           REGION='${AWS::Region}'
-          ENV_PARAMETER='${BackendEnvParameterName}'
-          FIREBASE_PARAMETER='${FirebaseCredentialParameterName}'
+          BACKEND_SECRET='${BackendConfigSecretArn}'
+          FIREBASE_SECRET='${FirebaseCredentialSecretArn}'
           REPOSITORY_BRANCH='${RepositoryBranch}'
+          export AWS_REGION="$REGION"
 
           install -d -m 0750 /etc/flash-ticketing
-          aws ssm get-parameter --region "$REGION" --name "$ENV_PARAMETER" --with-decryption --query Parameter.Value --output text > /etc/flash-ticketing/backend.env
-          aws ssm get-parameter --region "$REGION" --name "$FIREBASE_PARAMETER" --with-decryption --query Parameter.Value --output text > /etc/flash-ticketing/firebase-admin.json
+          AWS_TOKEN="$(</var/run/awssmatoken)" asm-exec -- \
+            sh -c 'umask 077; printf "%s" "$1" > "$2"' _ \
+            "{{resolve:secretsmanager:$BACKEND_SECRET:SecretString}}" \
+            /etc/flash-ticketing/backend.env
+          AWS_TOKEN="$(</var/run/awssmatoken)" asm-exec -- \
+            sh -c 'umask 077; printf "%s" "$1" > "$2"' _ \
+            "{{resolve:secretsmanager:$FIREBASE_SECRET:SecretString}}" \
+            /etc/flash-ticketing/firebase-admin.json
           chmod 0600 /etc/flash-ticketing/backend.env /etc/flash-ticketing/firebase-admin.json
 
           cd /opt/flash-ticketing
@@ -287,7 +363,7 @@ Resources:
           CachedMethods:
             - GET
             - HEAD
-          CachePolicyId: 413f160f-65cd-4c7f-b8c3-8dd4dfbdbe6a
+          CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
           Compress: true
           OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac
           TargetOriginId: ec2-api
