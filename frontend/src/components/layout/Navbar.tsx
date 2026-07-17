@@ -1,9 +1,12 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 import { logoutSession } from '../../lib/api';
+import { cn } from '../../lib/cn';
+import { useCatalogStore } from '../../stores/catalogStore';
 import { useAuthStore } from '../../stores/authStore';
 import { Button } from '../ui';
+import { BrandMark } from './BrandMark';
 
 type NavbarProps = {
   onCityClick?: () => void;
@@ -11,14 +14,15 @@ type NavbarProps = {
 };
 
 const navigation = [
-  { label: 'Movies', to: '/movies' },
-  { label: 'Events', to: '/#movies' },
-  { label: 'Plays', to: '/#movies' },
-  { label: 'Sports', to: '/#movies' },
+  { label: 'Movies', to: '/movies?contentType=movie' },
+  { label: 'Events', to: '/movies?contentType=event' },
+  { label: 'My bookings', to: '/bookings' },
 ];
 
 export function Navbar({ onCityClick, management = false }: NavbarProps) {
   const navigate = useNavigate();
+  const location = useLocation();
+  const city = useCatalogStore((state) => state.city);
   const [menuOpen, setMenuOpen] = useState(false);
   const user = useAuthStore((state) => state.user);
   const clearSession = useAuthStore((state) => state.clearSession);
@@ -31,53 +35,60 @@ export function Navbar({ onCityClick, management = false }: NavbarProps) {
   };
 
   return (
-    <header className="bg-surface-dark text-brand-contrast">
-      <div className="mx-auto flex min-h-20 max-w-content items-center justify-between gap-6 px-5 sm:px-8">
-        <Link className="shrink-0 text-xl font-bold tracking-tight sm:text-2xl" to="/">
-          Book My Show
-        </Link>
+    <header className="relative z-40 border-b border-brand-contrast/10 bg-surface-dark text-brand-contrast">
+      <div className="mx-auto flex min-h-16 max-w-content items-center justify-between gap-5 px-5 sm:px-8">
+        <BrandMark className="text-brand-contrast" />
 
         {!management ? (
           <nav aria-label="Primary" className="hidden items-center gap-8 lg:flex">
-            {navigation.map((item) => (
-              <Link
-                className="text-sm font-medium text-brand-contrast transition duration-fast hover:text-brand"
-                key={item.label}
-                to={item.to}
-              >
-                {item.label}
-              </Link>
-            ))}
+            {navigation.map((item) => {
+              const active = navIsActive(item.label, location.pathname, location.search);
+              return (
+                <Link
+                  className={cn(
+                    'border-b-2 border-transparent py-5 text-sm font-semibold text-brand-contrast/80 transition duration-fast hover:text-brand-contrast',
+                    active && 'border-brand text-brand-contrast',
+                  )}
+                  key={item.label}
+                  to={item.to}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
           </nav>
         ) : (
           <div className="hidden flex-1 lg:block" />
         )}
 
-        <div className="hidden items-center gap-3 sm:flex">
+        <div className="hidden items-center gap-2 sm:flex">
           {!management ? (
             <button
-              className="inline-flex min-h-11 items-center gap-2 rounded border border-muted px-4 text-sm font-medium transition duration-fast hover:border-brand-contrast"
+              className="inline-flex min-h-10 items-center gap-2 rounded-lg px-3 text-sm font-semibold text-brand-contrast/90 transition hover:bg-brand-contrast/10"
               onClick={onCityClick}
               type="button"
             >
               <LocationIcon />
-              Mumbai
+              {city}
               <ChevronDownIcon />
             </button>
           ) : null}
           {user ? (
             <>
-              <Link className="px-2 text-sm font-medium hover:text-brand" to="/bookings">
-                My bookings
-              </Link>
               <Button
+                className="border-brand-contrast/30 bg-transparent text-brand-contrast hover:bg-brand-contrast/10"
                 onClick={() => navigate(user.role === 'ADMIN' ? '/admin' : '/account')}
                 size="sm"
                 variant="outline"
               >
                 {user.name.split(' ')[0]}
               </Button>
-              <Button onClick={() => void signOut()} size="sm" variant="outline">
+              <Button
+                className="border-brand-contrast/30 bg-transparent text-brand-contrast hover:bg-brand-contrast/10"
+                onClick={() => void signOut()}
+                size="sm"
+                variant="outline"
+              >
                 Sign out
               </Button>
             </>
@@ -91,7 +102,7 @@ export function Navbar({ onCityClick, management = false }: NavbarProps) {
         <button
           aria-expanded={menuOpen}
           aria-label="Toggle navigation"
-          className="grid size-11 place-items-center rounded border border-muted sm:hidden"
+          className="grid size-11 place-items-center rounded-lg border border-brand-contrast/25 sm:hidden"
           onClick={() => setMenuOpen((current) => !current)}
           type="button"
         >
@@ -100,12 +111,15 @@ export function Navbar({ onCityClick, management = false }: NavbarProps) {
       </div>
 
       {menuOpen ? (
-        <nav aria-label="Mobile primary" className="border-t border-muted px-5 pb-5 sm:hidden">
+        <nav
+          aria-label="Mobile primary"
+          className="border-t border-brand-contrast/10 px-5 pb-5 sm:hidden"
+        >
           <div className="grid gap-1 pt-3">
             {!management
               ? navigation.map((item) => (
                   <Link
-                    className="rounded px-3 py-3 text-sm font-medium hover:bg-foreground"
+                    className="rounded-lg px-3 py-3 text-sm font-semibold hover:bg-brand-contrast/10"
                     key={item.label}
                     onClick={() => setMenuOpen(false)}
                     to={item.to}
@@ -116,34 +130,27 @@ export function Navbar({ onCityClick, management = false }: NavbarProps) {
               : null}
             {!management ? (
               <button
-                className="flex items-center gap-2 rounded px-3 py-3 text-left text-sm font-medium hover:bg-foreground"
+                className="flex items-center gap-2 rounded-lg px-3 py-3 text-left text-sm font-semibold hover:bg-brand-contrast/10"
                 onClick={() => {
                   setMenuOpen(false);
                   onCityClick?.();
                 }}
                 type="button"
               >
-                <LocationIcon /> Mumbai
+                <LocationIcon /> {city}
               </button>
             ) : null}
             {user ? (
               <>
                 <Link
-                  className="rounded px-3 py-3 text-sm font-medium hover:bg-foreground"
-                  onClick={() => setMenuOpen(false)}
-                  to="/bookings"
-                >
-                  My bookings
-                </Link>
-                <Link
-                  className="rounded px-3 py-3 text-sm font-medium hover:bg-foreground"
+                  className="rounded-lg px-3 py-3 text-sm font-semibold hover:bg-brand-contrast/10"
                   onClick={() => setMenuOpen(false)}
                   to={user.role === 'ADMIN' ? '/admin' : '/account'}
                 >
                   My account
                 </Link>
                 <button
-                  className="rounded px-3 py-3 text-left text-sm font-medium hover:bg-foreground"
+                  className="rounded-lg px-3 py-3 text-left text-sm font-semibold hover:bg-brand-contrast/10"
                   onClick={() => void signOut()}
                   type="button"
                 >
@@ -152,7 +159,7 @@ export function Navbar({ onCityClick, management = false }: NavbarProps) {
               </>
             ) : (
               <Link
-                className="rounded px-3 py-3 text-sm font-medium hover:bg-foreground"
+                className="rounded-lg bg-brand px-3 py-3 text-center text-sm font-semibold"
                 onClick={() => setMenuOpen(false)}
                 to="/login"
               >
@@ -164,6 +171,13 @@ export function Navbar({ onCityClick, management = false }: NavbarProps) {
       ) : null}
     </header>
   );
+}
+
+function navIsActive(label: string, pathname: string, search: string) {
+  if (label === 'My bookings') return pathname.startsWith('/bookings');
+  if (pathname !== '/movies') return false;
+  const type = new URLSearchParams(search).get('contentType');
+  return label === 'Events' ? type === 'event' : type !== 'event';
 }
 
 function LocationIcon() {

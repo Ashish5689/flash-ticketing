@@ -26,12 +26,24 @@ five days.
 ### Customers
 
 - Register or sign in with Firebase email/password or Google identity.
-- Browse published movies and filter by title, genre, language, and city.
-- View theaters, showtimes, tier prices, and a live seat map.
+- Browse a cinematic, poster-led catalog with a persistent city preference.
+- Filter shareable catalog URLs by type, title, genre, language, city, and an inclusive show-date range.
+- View seven days of availability, automatically land on the first bookable date, and compare theaters, showtimes, and tier prices.
+- Select accessible 40px seats with distinct available, selected, held, and sold states.
 - Atomically hold multiple seats with a five-minute countdown.
 - Continue through Stripe-hosted test checkout when payment configuration is enabled.
 - Confirm an order idempotently and receive a QR e-ticket.
-- Review booking history and individual ticket details.
+- Review Upcoming and Past bookings, open QR tickets, and print individual ticket details.
+
+The viewer UI is branded **Flash Ticketing** throughout and follows a cinematic editorial system:
+midnight navigation, coral actions, banner-led discovery, poster-first rails, event-specific landscape
+cards, responsive filter drawers, layout skeletons, and a guided Seats → Payment → Ticket journey.
+
+### Public discovery APIs
+
+- `GET /movies` accepts optional `dateFrom` and `dateTo` (`YYYY-MM-DD`) as an inclusive range of up to 31 days.
+- `GET /movies/:id/show-dates?city=Mumbai&from=YYYY-MM-DD&days=7` returns daily show counts for 1–14 days.
+- Date boundaries are evaluated in `Asia/Kolkata`; catalog results remain duplicate-free when a title has multiple matching shows.
 
 ### Organizers
 

@@ -3,7 +3,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { Link, useParams } from 'react-router-dom';
 
 import { CatalogShell } from '../components/layout/CatalogShell';
-import { Badge, Card, Spinner } from '../components/ui';
+import { Badge, Button, Card, Skeleton } from '../components/ui';
 import { getBooking } from '../lib/booking-api';
 
 function formatRupees(priceCents: number) {
@@ -26,8 +26,10 @@ export default function OrderConfirmationPage() {
     <CatalogShell>
       <main className="flex-1 bg-background px-5 py-10 sm:px-8">
         {bookingQuery.isLoading ? (
-          <div className="grid min-h-[36rem] place-items-center">
-            <Spinner label="Loading ticket" />
+          <div className="mx-auto max-w-3xl">
+            <Skeleton className="mx-auto h-14 w-14 rounded-full" />
+            <Skeleton className="mx-auto mt-5 h-9 w-72" />
+            <Skeleton className="mt-8 h-96 rounded-xl" />
           </div>
         ) : null}
         {bookingQuery.isError ? (
@@ -49,7 +51,9 @@ export default function OrderConfirmationPage() {
               <p className="mt-2 text-muted">Show this QR ticket at the cinema entrance.</p>
             </div>
 
-            <Card className="mt-8 overflow-hidden p-0">
+            <Card className="relative mt-8 overflow-hidden border-0 p-0 shadow-md">
+              <span className="absolute -left-3 top-[60%] z-10 size-6 rounded-full bg-background" />
+              <span className="absolute -right-3 top-[60%] z-10 size-6 rounded-full bg-background" />
               <div className="grid md:grid-cols-[1fr_15rem]">
                 <div className="p-6 sm:p-8">
                   <div className="flex gap-4">
@@ -105,15 +109,22 @@ export default function OrderConfirmationPage() {
                         value={bookingQuery.data.ticket.qrPayload}
                       />
                     </div>
-                    <p className="mt-3 font-mono text-xs font-semibold">
+                    <p className="mt-3 text-xs font-semibold text-muted">Ticket code</p>
+                    <p className="mt-1 font-mono text-xs font-bold">
                       {bookingQuery.data.ticket.code}
                     </p>
                   </div>
                 </div>
               </div>
             </Card>
-            <div className="mt-6 text-center">
-              <Link className="font-semibold text-brand" to="/bookings">
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-3 print:hidden">
+              <Button onClick={() => window.print()} variant="outline">
+                Print ticket
+              </Button>
+              <Link
+                className="inline-flex min-h-11 items-center px-4 font-semibold text-brand"
+                to="/bookings"
+              >
                 View all bookings
               </Link>
             </div>

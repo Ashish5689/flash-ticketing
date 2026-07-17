@@ -1,4 +1,4 @@
-import { and, arrayContains, asc, desc, eq, ilike, type SQL } from 'drizzle-orm';
+import { and, arrayContains, asc, desc, eq, gte, ilike, lt, type SQL } from 'drizzle-orm';
 
 import { db } from '../../config/db.js';
 import { movies } from '../../db/schema/movies.js';
@@ -6,6 +6,7 @@ import { shows } from '../../db/schema/shows.js';
 import { screens, theaters } from '../../db/schema/theaters.js';
 import { assertManagedAssetUrl, deleteManagedAssetsBestEffort } from '../media/media.service.js';
 import { AppError } from '../../shared/errors.js';
+import { inclusiveIndiaDateRange } from '../../shared/india-date.js';
 import type { z } from 'zod';
 import type { movieInputSchema, movieListQuerySchema, movieUpdateSchema } from './movie.schemas.js';
 
@@ -43,7 +44,9 @@ function filters(query: MovieQuery, publicOnly: boolean) {
 }
 
 export function listMovies(query: MovieQuery, publicOnly = true) {
-  if (publicOnly && query.city) {
+  if (publicOnly && (query.city || (query.dateFrom && query.dateTo))) {
+    const dateRange =
+      query.dateFrom && query.dateTo ? inclusiveIndiaDateRange(query.dateFrom, query.dateTo) : null;
     return db
       .selectDistinct(movieResponseSelection)
       .from(movies)
@@ -55,7 +58,9 @@ export function listMovies(query: MovieQuery, publicOnly = true) {
           filters(query, true),
           eq(shows.status, 'onsale'),
           eq(theaters.status, 'active'),
-          ilike(theaters.city, query.city),
+          query.city ? ilike(theaters.city, query.city) : undefined,
+          dateRange ? gte(shows.startsAt, dateRange.start) : undefined,
+          dateRange ? lt(shows.startsAt, dateRange.end) : undefined,
         ),
       )
       .orderBy(desc(movies.releaseDate), asc(movies.title));

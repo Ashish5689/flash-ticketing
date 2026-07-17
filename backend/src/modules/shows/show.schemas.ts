@@ -28,6 +28,12 @@ export const showtimeQuerySchema = z.object({
   date: z.iso.date().optional(),
 });
 
+export const showDateQuerySchema = z.object({
+  city: z.string().trim().min(2).max(120).default('Mumbai'),
+  from: z.iso.date().optional(),
+  days: z.coerce.number().int().min(1).max(14).default(7),
+});
+
 export const organizerShowQuerySchema = z.object({
   status: z.enum(['scheduled', 'onsale', 'closed', 'cancelled']).optional(),
 });

@@ -44,7 +44,7 @@ export default function LoginPage() {
       description="Sign in to manage bookings, saved shows, and your account."
       footer={
         <>
-          New to Book My Show?{' '}
+          New to Flash Ticketing?{' '}
           <Link className="font-semibold text-brand hover:text-brand-hover" to="/register">
             Create an account
           </Link>

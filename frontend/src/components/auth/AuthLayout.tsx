@@ -1,5 +1,5 @@
-import type { PropsWithChildren, ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, type PropsWithChildren, type ReactNode } from 'react';
+import { BrandMark } from '../layout/BrandMark';
 
 type AuthLayoutProps = PropsWithChildren<{
   title: string;
@@ -8,19 +8,36 @@ type AuthLayoutProps = PropsWithChildren<{
 }>;
 
 export function AuthLayout({ title, description, footer, children }: AuthLayoutProps) {
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0 });
+  }, []);
+
   return (
-    <div className="flex min-h-screen flex-col bg-background">
-      <header className="bg-surface-dark text-brand-contrast">
+    <div className="min-h-screen bg-surface-dark">
+      <header className="text-brand-contrast">
         <div className="mx-auto flex min-h-20 max-w-content items-center px-5 sm:px-8">
-          <Link className="text-xl font-bold tracking-tight sm:text-2xl" to="/">
-            Book My Show
-          </Link>
+          <BrandMark className="text-brand-contrast" />
         </div>
       </header>
-      <main className="grid flex-1 place-items-center px-5 py-10 sm:px-8">
-        <section className="w-full max-w-md overflow-hidden rounded-xl border border-border bg-surface shadow-md">
+      <main className="mx-auto grid min-h-[calc(100vh-5rem)] max-w-content items-center gap-10 px-5 py-10 sm:px-8 lg:grid-cols-[1fr_28rem]">
+        <section className="relative hidden min-h-[34rem] overflow-hidden rounded-xl lg:block">
+          <img
+            alt="Flash Ticketing movie collection"
+            className="absolute inset-0 size-full object-cover"
+            src="https://d1f9tbdxdqavp.cloudfront.net/movies/showcase/kuberaa.png"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-surface-dark via-surface-dark/40 to-transparent" />
+          <div className="absolute inset-x-0 bottom-0 p-10 text-brand-contrast">
+            <h2 className="max-w-lg text-4xl font-extrabold tracking-tight">
+              Your next great story starts with a seat.
+            </h2>
+            <p className="mt-4 max-w-md text-brand-contrast/75">
+              Sign in once to book faster and keep every ticket ready on your phone.
+            </p>
+          </div>
+        </section>
+        <section className="w-full overflow-hidden rounded-xl border border-brand-contrast/10 bg-surface shadow-md">
           <div className="border-b border-border px-6 py-7 sm:px-8">
-            <p className="mb-2 text-sm font-semibold text-brand">Your tickets, one account</p>
             <h1 className="text-3xl font-bold tracking-tight text-foreground">{title}</h1>
             <p className="mt-2 text-sm leading-6 text-muted">{description}</p>
           </div>

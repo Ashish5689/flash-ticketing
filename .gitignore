@@ -12,3 +12,5 @@ coverage/
 aws-cli-profile.txt
 aws-profile.txt
 firebase-adminsdk*.json
+DESIGN.md
+MEMORY.md

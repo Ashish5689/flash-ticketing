@@ -64,7 +64,7 @@ export const exchangeFirebaseToken: RequestHandler = async (request, response) =
   const user = await upsertIdentity({
     firebaseUid: decoded.uid,
     email: decoded.email,
-    name: decoded.name?.trim() || decoded.email.split('@')[0] || 'Book My Show user',
+    name: decoded.name?.trim() || decoded.email.split('@')[0] || 'Flash Ticketing user',
     avatarUrl: decoded.picture,
     provider,
   });

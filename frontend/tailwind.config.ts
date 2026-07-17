@@ -33,6 +33,7 @@ export default {
         seat: {
           available: 'var(--color-seat-available)',
           selected: 'var(--color-seat-selected)',
+          held: 'var(--color-seat-held)',
           sold: 'var(--color-seat-sold)',
           bestseller: 'var(--color-seat-bestseller)',
         },
