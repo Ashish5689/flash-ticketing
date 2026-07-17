@@ -16,6 +16,7 @@ import {
 } from './modules/organizer/organizer.routes.js';
 import { theaterRouter } from './modules/theaters/theater.routes.js';
 import {
+  movieShowDateRouter,
   movieShowtimeRouter,
   organizerShowRouter,
   showRouter,
@@ -69,6 +70,7 @@ export function createApp() {
 
   app.use('/auth', authRouter);
   app.use('/movies/:movieId/showtimes', movieShowtimeRouter);
+  app.use('/movies/:movieId/show-dates', movieShowDateRouter);
   app.use('/movies', movieRouter);
   app.use('/shows', showRouter);
   app.use('/bookings', bookingRouter);

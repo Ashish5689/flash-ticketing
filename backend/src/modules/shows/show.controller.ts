@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import {
   organizerShowQuerySchema,
+  showDateQuerySchema,
   showInputSchema,
   showStatusUpdateSchema,
   showtimeQuerySchema,
@@ -13,6 +14,7 @@ import {
   getPublicShow,
   getShowSeatMap,
   listMovieShowtimes,
+  listMovieShowDates,
   listOrganizerShows,
   listShowCities,
   publishShow,
@@ -51,6 +53,13 @@ export const listPublicMovieShowtimes: RequestHandler = async (request, response
   response
     .status(200)
     .json(await listMovieShowtimes(movieId, showtimeQuerySchema.parse(request.query)));
+};
+
+export const listPublicMovieShowDates: RequestHandler = async (request, response) => {
+  const { movieId } = movieIdSchema.parse(request.params);
+  response
+    .status(200)
+    .json(await listMovieShowDates(movieId, showDateQuerySchema.parse(request.query)));
 };
 
 export const listPublicShowCities: RequestHandler = async (_request, response) => {

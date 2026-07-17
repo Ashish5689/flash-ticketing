@@ -34,11 +34,48 @@ export const movieUpdateSchema = movieInputSchema
   .partial()
   .refine((value) => Object.keys(value).length > 0, 'Provide at least one field to update');
 
-export const movieListQuerySchema = z.object({
+const publicMovieListFields = {
   contentType: z.enum(['movie', 'event']).optional(),
   q: z.string().trim().max(100).optional(),
   genre: z.string().trim().max(40).optional(),
   language: z.string().trim().max(40).optional(),
   city: z.string().trim().max(120).optional(),
-  status: z.enum(['draft', 'published', 'archived']).optional(),
-});
+  dateFrom: z.iso.date().optional(),
+  dateTo: z.iso.date().optional(),
+};
+
+function validateDateRange(
+  query: { dateFrom?: string; dateTo?: string },
+  context: z.RefinementCtx,
+) {
+  if (Boolean(query.dateFrom) !== Boolean(query.dateTo)) {
+    context.addIssue({
+      code: 'custom',
+      message: 'dateFrom and dateTo must be provided together',
+      path: [query.dateFrom ? 'dateTo' : 'dateFrom'],
+    });
+    return;
+  }
+  if (!query.dateFrom || !query.dateTo) return;
+  const start = Date.parse(`${query.dateFrom}T00:00:00Z`);
+  const end = Date.parse(`${query.dateTo}T00:00:00Z`);
+  const inclusiveDays = Math.floor((end - start) / 86_400_000) + 1;
+  if (inclusiveDays < 1 || inclusiveDays > 31) {
+    context.addIssue({
+      code: 'custom',
+      message: 'Use an inclusive date range between 1 and 31 days',
+      path: ['dateTo'],
+    });
+  }
+}
+
+export const publicMovieListQuerySchema = z
+  .object(publicMovieListFields)
+  .superRefine(validateDateRange);
+
+export const movieListQuerySchema = z
+  .object({
+    ...publicMovieListFields,
+    status: z.enum(['draft', 'published', 'archived']).optional(),
+  })
+  .superRefine(validateDateRange);

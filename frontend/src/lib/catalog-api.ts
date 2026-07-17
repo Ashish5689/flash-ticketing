@@ -6,6 +6,7 @@ import type {
   OrganizerApplication,
   Screen,
   ScreenLayout,
+  MovieShowDates,
   MovieShowtimes,
   OrganizerShow,
   ShowSeatMap,
@@ -29,6 +30,8 @@ export async function getMovies(
     language?: string;
     city?: string;
     contentType?: 'movie' | 'event';
+    dateFrom?: string;
+    dateTo?: string;
   } = {},
 ) {
   return (await apiRequest<{ movies: Movie[] }>(`/movies${queryString(filters)}`)).movies;
@@ -221,6 +224,13 @@ export function cancelOrganizerShow(id: string) {
 
 export async function getMovieShowtimes(movieId: string, filters: { city: string; date: string }) {
   return apiRequest<MovieShowtimes>(`/movies/${movieId}/showtimes${queryString(filters)}`);
+}
+
+export async function getMovieShowDates(
+  movieId: string,
+  filters: { city: string; from: string; days?: string },
+) {
+  return apiRequest<MovieShowDates>(`/movies/${movieId}/show-dates${queryString(filters)}`);
 }
 
 export async function getShowCities() {

@@ -110,6 +110,11 @@ export type MovieShowtimes = {
   }>;
 };
 
+export type MovieShowDates = {
+  city: string;
+  dates: Array<{ date: string; showCount: number }>;
+};
+
 export type PublicShow = {
   id: string;
   movieId: string;

@@ -4,5 +4,6 @@ export { Card } from './Card';
 export { Input } from './Input';
 export { Modal } from './Modal';
 export { Spinner } from './Spinner';
+export { Skeleton } from './Skeleton';
 export { Select } from './Select';
 export { Textarea } from './Textarea';

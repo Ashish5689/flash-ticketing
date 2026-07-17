@@ -48,7 +48,7 @@ export default function OrganizerApplyPage() {
         </Link>
         <h1 className="mt-6 text-4xl font-bold tracking-tight">Become an organizer</h1>
         <p className="mt-3 max-w-2xl leading-7 text-muted">
-          Apply to manage theaters, screens, layouts, and show listings on Book My Show.
+          Apply to manage theaters, screens, layouts, and show listings on Flash Ticketing.
         </p>
         {applicationQuery.isLoading ? (
           <div className="grid min-h-64 place-items-center">

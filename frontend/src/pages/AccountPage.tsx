@@ -1,17 +1,14 @@
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
-import { Footer, Navbar } from '../components/layout';
-import { Badge, Card, Modal } from '../components/ui';
+import { CatalogShell } from '../components/layout/CatalogShell';
+import { Badge, Card } from '../components/ui';
 import { useAuthStore } from '../stores/authStore';
 
 export default function AccountPage() {
   const user = useAuthStore((state) => state.user);
-  const [cityOpen, setCityOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <Navbar onCityClick={() => setCityOpen(true)} />
+    <CatalogShell>
       <main className="mx-auto w-full max-w-content flex-1 px-5 py-10 sm:px-8">
         <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
@@ -23,7 +20,7 @@ export default function AccountPage() {
         </div>
         <div className="grid gap-5 lg:grid-cols-3">
           <Card className="lg:col-span-2">
-            <h2 className="text-lg font-bold">Your movie tickets</h2>
+            <h2 className="text-lg font-bold">Your tickets</h2>
             <div className="mt-6 rounded-lg border border-dashed border-border bg-surface-subtle px-6 py-10 text-center">
               <TicketIcon />
               <p className="mt-4 font-semibold">Booking history</p>
@@ -81,16 +78,7 @@ export default function AccountPage() {
           </Card>
         </div>
       </main>
-      <Footer />
-      <Modal
-        description="City discovery is wired for the catalog phase."
-        onClose={() => setCityOpen(false)}
-        open={cityOpen}
-        title="Mumbai selected"
-      >
-        <p className="text-sm text-muted">You’ll see nearby cinemas and events here in Phase 2.</p>
-      </Modal>
-    </div>
+    </CatalogShell>
   );
 }
 

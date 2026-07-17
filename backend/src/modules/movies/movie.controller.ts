@@ -1,7 +1,12 @@
 import type { RequestHandler } from 'express';
 import { z } from 'zod';
 
-import { movieInputSchema, movieListQuerySchema, movieUpdateSchema } from './movie.schemas.js';
+import {
+  movieInputSchema,
+  movieListQuerySchema,
+  movieUpdateSchema,
+  publicMovieListQuerySchema,
+} from './movie.schemas.js';
 import {
   createMovie,
   deleteMovie,
@@ -14,7 +19,7 @@ import {
 const idSchema = z.object({ id: z.uuid() });
 
 export const listPublicMovies: RequestHandler = async (request, response) => {
-  const query = movieListQuerySchema.omit({ status: true }).parse(request.query);
+  const query = publicMovieListQuerySchema.parse(request.query);
   response.status(200).json({ movies: await listMovies(query, true) });
 };
 

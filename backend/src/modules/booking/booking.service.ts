@@ -326,7 +326,7 @@ export async function confirmBooking(
           showId: metadata.showId,
           amountCents,
           idempotencyKey,
-          ticketCode: `BMS-${randomUUID().replaceAll('-', '').slice(0, 12).toUpperCase()}`,
+          ticketCode: `FLT-${randomUUID().replaceAll('-', '').slice(0, 12).toUpperCase()}`,
         })
         .returning();
       if (!created) throw new Error('Failed to create booking');

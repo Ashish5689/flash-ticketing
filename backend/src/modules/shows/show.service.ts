@@ -7,17 +7,24 @@ import { movies } from '../../db/schema/movies.js';
 import { showPricing, showSeats, shows } from '../../db/schema/shows.js';
 import { screens, theaters, type ScreenLayout, type SeatTier } from '../../db/schema/theaters.js';
 import { AppError } from '../../shared/errors.js';
+import {
+  addIndiaDays,
+  buildIndiaDateCounts,
+  indiaDayRange,
+  todayInIndia,
+} from '../../shared/india-date.js';
 import type {
   organizerShowQuerySchema,
+  showDateQuerySchema,
   showInputSchema,
   showtimeQuerySchema,
 } from './show.schemas.js';
 
 type ShowInput = z.infer<typeof showInputSchema>;
 type ShowtimeQuery = z.infer<typeof showtimeQuerySchema>;
+type ShowDateQuery = z.infer<typeof showDateQuerySchema>;
 type OrganizerShowQuery = z.infer<typeof organizerShowQuerySchema>;
 
-const indiaTimeZone = 'Asia/Kolkata';
 const minimumShowLeadMs = 15 * 60 * 1000;
 
 export function expandSeatLayout(layout: ScreenLayout) {
@@ -48,20 +55,6 @@ function assertPricingCoversLayout(layout: ScreenLayout, pricing: ShowInput['pri
       `Price exactly the screen tiers in use${missing.length ? `; missing ${missing.join(', ')}` : ''}${unused.length ? `; unused ${unused.join(', ')}` : ''}`,
     );
   }
-}
-
-function todayInIndia() {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: indiaTimeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date());
-}
-
-function indiaDayRange(date = todayInIndia()) {
-  const start = new Date(`${date}T00:00:00+05:30`);
-  return { start, end: new Date(start.getTime() + 24 * 60 * 60 * 1000), date };
 }
 
 async function screenForOrganizer(screenId: string, organizerId: string) {
@@ -267,6 +260,37 @@ export async function listMovieShowtimes(movieId: string, query: ShowtimeQuery) 
     theaterGroups.set(row.theater.id, group);
   }
   return { date: range.date, city: query.city, theaters: [...theaterGroups.values()] };
+}
+
+export async function listMovieShowDates(movieId: string, query: ShowDateQuery) {
+  await publishedMovie(movieId);
+  const from = query.from ?? todayInIndia();
+  const start = indiaDayRange(from).start;
+  const end = indiaDayRange(addIndiaDays(from, query.days)).start;
+  const rows = await db
+    .select({ startsAt: shows.startsAt })
+    .from(shows)
+    .innerJoin(screens, eq(shows.screenId, screens.id))
+    .innerJoin(theaters, eq(screens.theaterId, theaters.id))
+    .where(
+      and(
+        eq(shows.movieId, movieId),
+        eq(shows.status, 'onsale'),
+        eq(theaters.status, 'active'),
+        ilike(theaters.city, query.city),
+        gte(shows.startsAt, start),
+        lt(shows.startsAt, end),
+      ),
+    )
+    .orderBy(asc(shows.startsAt));
+  return {
+    city: query.city,
+    dates: buildIndiaDateCounts(
+      rows.map(({ startsAt }) => startsAt),
+      from,
+      query.days,
+    ),
+  };
 }
 
 export async function listShowCities() {

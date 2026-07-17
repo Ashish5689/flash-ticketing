@@ -165,7 +165,7 @@ async function verify() {
     holdId: winningHold,
     payment,
   });
-  if (confirmed.id !== replay.id || !confirmed.ticket.code.startsWith('BMS-')) {
+  if (confirmed.id !== replay.id || !confirmed.ticket.code.startsWith('FLT-')) {
     throw new Error('Idempotent confirmation did not return the same QR ticket');
   }
 

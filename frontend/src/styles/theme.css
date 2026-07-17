@@ -7,14 +7,14 @@
   --color-brand-hover: #dc3558;
   --color-brand-soft: #fff0f3;
   --color-brand-contrast: #ffffff;
-  --color-surface-dark: #1f2533;
+  --color-surface-dark: #071322;
   --color-surface: #ffffff;
-  --color-surface-subtle: #fafafa;
+  --color-surface-subtle: #f7f8fa;
   --color-surface-elevated: #ffffff;
-  --color-bg: #f5f5f5;
-  --color-text: #222539;
-  --color-text-muted: #6e7387;
-  --color-border: #d9dce5;
+  --color-bg: #f3f5f8;
+  --color-text: #101828;
+  --color-text-muted: #667085;
+  --color-border: #d8dee9;
   --color-focus: #f84464;
   --color-success: #237a3b;
   --color-success-soft: #e7f6eb;
@@ -22,6 +22,7 @@
   --color-info-soft: #e9f4ff;
   --color-seat-available: #92aa9b;
   --color-seat-selected: #1ea83c;
+  --color-seat-held: #f2b84b;
   --color-seat-sold: #c8cad2;
   --color-seat-bestseller: #d79000;
   --color-overlay: rgb(18 22 31 / 72%);
@@ -41,7 +42,7 @@
 
   --motion-fast: 150ms;
   --motion-base: 220ms;
-  --container-max: 88rem;
+  --container-max: 80rem;
 }
 
 @layer base {
@@ -51,6 +52,11 @@
 
   body {
     @apply m-0 min-w-80 bg-background font-sans text-foreground antialiased;
+  }
+
+  ::selection {
+    background: var(--color-brand-soft);
+    color: var(--color-text);
   }
 
   button,

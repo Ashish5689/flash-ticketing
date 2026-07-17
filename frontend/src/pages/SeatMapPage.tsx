@@ -3,7 +3,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import { CatalogShell } from '../components/layout/CatalogShell';
-import { Badge, Button, Spinner } from '../components/ui';
+import { Badge, Button, Skeleton } from '../components/ui';
 import { createSeatHold } from '../lib/booking-api';
 import { getShowSeatMap } from '../lib/catalog-api';
 import { cn } from '../lib/cn';
@@ -63,8 +63,9 @@ export default function SeatMapPage() {
     <CatalogShell>
       <main className="flex-1 bg-background">
         {seatMapQuery.isLoading ? (
-          <div className="grid min-h-[36rem] place-items-center">
-            <Spinner label="Loading seat map" />
+          <div className="mx-auto max-w-content px-5 py-10 sm:px-8">
+            <Skeleton className="h-28 rounded-xl" />
+            <Skeleton className="mt-8 h-[30rem] rounded-xl bg-surface-dark/80" />
           </div>
         ) : null}
         {seatMapQuery.isError ? (
@@ -175,7 +176,13 @@ function SeatMapContent({
           ))}
         </div>
 
-        <div className="overflow-x-auto rounded-xl bg-surface-dark px-5 py-8 shadow-md sm:px-8">
+        <p className="mb-3 text-center text-xs font-semibold text-muted sm:hidden">
+          Swipe sideways to see every seat
+        </p>
+        <div
+          className="overflow-x-auto rounded-xl bg-surface-dark px-5 py-8 shadow-md sm:px-8"
+          tabIndex={0}
+        >
           <div className="mx-auto min-w-max">
             <div className="mx-auto mb-10 w-3/4 max-w-3xl text-center">
               <div className="h-2 rounded-[50%] bg-brand-contrast shadow-sm" />
@@ -183,9 +190,14 @@ function SeatMapContent({
             </div>
             <div className="grid gap-4">
               {data.layout.rows.map((row) => (
-                <div className="grid grid-cols-[2rem_1fr_2rem] items-center gap-3" key={row.label}>
-                  <span className="text-xs font-semibold text-brand-contrast">{row.label}</span>
-                  <div className="flex justify-center gap-2">
+                <div
+                  className="grid grid-cols-[2.5rem_1fr_2.5rem] items-center gap-3"
+                  key={row.label}
+                >
+                  <span className="sticky left-0 z-10 grid h-10 place-items-center bg-surface-dark text-xs font-semibold text-brand-contrast">
+                    {row.label}
+                  </span>
+                  <div className="flex justify-center gap-2.5">
                     {row.seats.map((seat) => (
                       <Seat
                         addAisle={aisleColumns.has(seat.number)}
@@ -196,7 +208,7 @@ function SeatMapContent({
                       />
                     ))}
                   </div>
-                  <span className="text-right text-xs font-semibold text-brand-contrast">
+                  <span className="sticky right-0 z-10 grid h-10 place-items-center bg-surface-dark text-xs font-semibold text-brand-contrast">
                     {row.label}
                   </span>
                 </div>
@@ -208,10 +220,11 @@ function SeatMapContent({
         <div className="mt-6 flex flex-wrap justify-center gap-5 text-sm text-muted">
           <Legend className="border-seat-available bg-surface" label="Available" />
           <Legend className="border-seat-selected bg-seat-selected" label="Selected" />
-          <Legend className="border-seat-sold bg-seat-sold" label="Held / sold" />
+          <Legend className="border-seat-held bg-seat-held" label="Held" />
+          <Legend className="border-seat-sold bg-seat-sold" label="Sold" />
         </div>
 
-        <div className="sticky bottom-4 mx-auto mt-8 max-w-2xl rounded-xl border border-border bg-surface p-4 shadow-lg">
+        <div className="sticky bottom-0 z-20 mx-auto mt-8 max-w-2xl rounded-t-xl border border-border bg-surface p-4 shadow-lg sm:bottom-4 sm:rounded-xl">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="font-semibold">
@@ -221,6 +234,11 @@ function SeatMapContent({
                 {selected.length} seat{selected.length === 1 ? '' : 's'} ·{' '}
                 {formatRupees(selectedTotal)}
               </p>
+              {selected.length === 10 ? (
+                <p className="mt-1 text-xs font-semibold text-brand" role="status">
+                  Maximum 10 seats selected
+                </p>
+              ) : null}
             </div>
             <Button disabled={selected.length === 0 || holding} onClick={onContinue}>
               {holding ? 'Holding seats…' : signedIn ? 'Continue' : 'Sign in to book'}
@@ -254,9 +272,11 @@ function Seat({
       aria-label={`${seat.label}, ${tierLabels[seat.tier]}, ${selected ? 'selected' : seat.status}`}
       aria-pressed={selected}
       className={cn(
-        'grid size-7 place-items-center rounded-sm border text-[0.65rem] font-semibold transition duration-fast',
+        'grid size-10 place-items-center rounded-md border text-xs font-semibold transition duration-fast',
         unavailable
-          ? 'cursor-not-allowed border-seat-sold bg-seat-sold text-muted'
+          ? seat.status === 'held'
+            ? 'cursor-not-allowed border-seat-held bg-seat-held text-foreground'
+            : 'cursor-not-allowed border-seat-sold bg-seat-sold text-muted'
           : selected
             ? 'border-seat-selected bg-seat-selected text-brand-contrast'
             : 'border-seat-available bg-surface text-success hover:bg-success-soft',

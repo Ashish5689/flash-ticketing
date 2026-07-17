@@ -7,6 +7,7 @@ import {
   getPublicShowSeats,
   listMyShows,
   listPublicMovieShowtimes,
+  listPublicMovieShowDates,
   listPublicShowCities,
   publishMyShow,
   updateMyShowStatus,
@@ -26,3 +27,6 @@ showRouter.get('/:id/seats', getPublicShowSeats);
 
 export const movieShowtimeRouter = Router({ mergeParams: true });
 movieShowtimeRouter.get('/', listPublicMovieShowtimes);
+
+export const movieShowDateRouter = Router({ mergeParams: true });
+movieShowDateRouter.get('/', listPublicMovieShowDates);
